@@ -67,6 +67,8 @@ const cards = [
 ];
 
 const flowerAsset = '/saffron-flower.png';
+const birthdayMonthIndex = 4;
+const birthdayDay = 29;
 
 const cardFloatStyles = [
   { x: '14px', y: '18px', duration: '6.2s', delay: '0s' },
@@ -76,6 +78,43 @@ const cardFloatStyles = [
   { x: '12px', y: '15px', duration: '6.1s', delay: '0.12s' },
   { x: '-14px', y: '18px', duration: '6.7s', delay: '0.42s' }
 ];
+
+const getNextBirthdayTarget = (referenceTime = Date.now()) => {
+  const now = new Date(referenceTime);
+  let target = new Date(now.getFullYear(), birthdayMonthIndex, birthdayDay, 0, 0, 0, 0);
+
+  if (referenceTime >= target.getTime()) {
+    target = new Date(now.getFullYear() + 1, birthdayMonthIndex, birthdayDay, 0, 0, 0, 0);
+  }
+
+  return target;
+};
+
+const formatBirthdayCountdown = (referenceTime = Date.now()) => {
+  const target = getNextBirthdayTarget(referenceTime);
+  const remaining = Math.max(0, target.getTime() - referenceTime);
+  const totalSeconds = Math.floor(remaining / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return {
+    value: remaining === 0
+      ? 'TODAY'
+      : `${String(days).padStart(2, '0')}D ${String(hours).padStart(2, '0')}H ${String(minutes).padStart(2, '0')}M ${String(seconds).padStart(2, '0')}S`,
+  };
+};
+
+function BirthdayCountdown({ now }) {
+  const countdown = formatBirthdayCountdown(now);
+
+  return (
+    <div className="hero-chip birthday-hero__chip birthday-hero__chip--countdown" aria-label={`Birthday countdown ${countdown.value}`}>
+      <span className="birthday-hero__chip-value">{countdown.value}</span>
+    </div>
+  );
+}
 
 function AnimatedTitle({ ready, tone = 'light' }) {
   return (
@@ -159,12 +198,6 @@ function AuthScreen({
 
         {status ? <div className="auth-status">{status}</div> : null}
         {error ? <div className="auth-status auth-status--error">{error}</div> : null}
-
-        <div className="auth-note">
-          {cooldownRemaining > 0
-            ? `Please wait ${formatWaitTime(cooldownRemaining)} before asking for another link.`
-            : `Check your inbox and spam folder. If nothing arrives, your Supabase project may need SMTP enabled or your email added to the project team. The redirect URL is ${getAuthRedirectUrl()}.`}
-        </div>
       </div>
     </div>
   );
@@ -180,8 +213,30 @@ function BirthdayExperience({
   const [heroReady, setHeroReady] = useState(false);
   const [cardsVisible, setCardsVisible] = useState(false);
   const [thankYouOpen, setThankYouOpen] = useState(false);
+  const [notInterestedShift, setNotInterestedShift] = useState({ x: 0, y: 0 });
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const cardsTimer = useRef(null);
   const cleanupRef = useRef(null);
+
+  const moveNotInterestedButton = (event) => {
+    const touchPoint = event.touches?.[0] || event.changedTouches?.[0];
+    const clientX = touchPoint?.clientX ?? event.clientX;
+    const clientY = touchPoint?.clientY ?? event.clientY;
+    const buttonRect = event.currentTarget.getBoundingClientRect();
+    const centerX = buttonRect.left + buttonRect.width / 2;
+    const centerY = buttonRect.top + buttonRect.height / 2;
+    const cursorLeftOfButton = clientX < centerX;
+    const cursorAboveButton = clientY < centerY;
+
+    setNotInterestedShift({
+      x: cursorLeftOfButton ? 120 : -120,
+      y: cursorAboveButton ? 42 : -42,
+    });
+  };
+
+  const resetNotInterestedButton = () => {
+    setNotInterestedShift({ x: 0, y: 0 });
+  };
 
   useEffect(() => {
     const readyTimer = window.setTimeout(() => setHeroReady(true), 120);
@@ -209,6 +264,14 @@ function BirthdayExperience({
         cleanupRef.current();
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setClockNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   return (
@@ -255,12 +318,49 @@ function BirthdayExperience({
       <div id="startScreen" className="center birthday-hero">
         <div className="birthday-hero__stage">
           <div className="birthday-hero__content">
-            <div className="hero-chip birthday-hero__chip">A tiny birthday universe</div>
-            <AnimatedTitle ready={heroReady} tone="dark" />
+            <BirthdayCountdown now={clockNow} />
+            <div className="birthday-hero__title-row">
+              <img
+                className="birthday-hero__flower birthday-hero__flower--mobile birthday-hero__flower--mobile-left"
+                src={flowerAsset}
+                alt=""
+                aria-hidden="true"
+              />
+              <AnimatedTitle ready={heroReady} tone="dark" />
+              <img
+                className="birthday-hero__flower birthday-hero__flower--mobile birthday-hero__flower--mobile-right"
+                src={flowerAsset}
+                alt=""
+                aria-hidden="true"
+              />
+            </div>
             <p className="birthday-hero__copy">Do you want to see your gift?</p>
-            <button id="startBtn" className="birthday-hero__button" type="button">
-              See more
-            </button>
+            <div className="birthday-hero__actions">
+              <button id="startBtn" className="birthday-hero__button" type="button">
+                See more surprise
+              </button>
+              <button
+                className="birthday-hero__button birthday-hero__button--ghost birthday-hero__button--escape"
+                type="button"
+                onPointerEnter={moveNotInterestedButton}
+                onPointerMove={moveNotInterestedButton}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  moveNotInterestedButton(event);
+                }}
+                onPointerLeave={resetNotInterestedButton}
+                onTouchStart={(event) => {
+                  event.preventDefault();
+                  moveNotInterestedButton(event);
+                }}
+                onClick={(event) => event.preventDefault()}
+                style={{
+                  transform: `translate(${notInterestedShift.x}px, ${notInterestedShift.y}px)`,
+                }}
+              >
+                Not interested
+              </button>
+            </div>
           </div>
 
           <img className="birthday-hero__flower birthday-hero__flower--left" src={flowerAsset} alt="" aria-hidden="true" />
@@ -283,6 +383,10 @@ function BirthdayExperience({
       </audio>
 
       <main id="mainContent" className="home-shell">
+        <div className="home-shell__heading">
+          <h2 className="home-shell__title">Happy Birthday</h2>
+          <div className="home-shell__subtitle">Harshi</div>
+        </div>
         <section className={`cards-stage ${cardsVisible ? 'is-visible' : ''}`}>
           <div className="cards-thread" aria-hidden="true">
             <span className="cards-thread__spine" />

@@ -46,12 +46,55 @@ let countdownIntervalId;
 let confettiRainIntervalId;
 let heartRainIntervalId;
 let cardHeartIntervalId;
+let introMusicStopTimer;
 const cardHeartLayer = document.getElementById("heartFloatLayer");
 
 
 function stopIntroMusic() {
   bgm.pause();
   bgm.currentTime = 0;
+}
+
+function stopIntroMusicAfterIntroText() {
+  if (!intro) return;
+
+  const introText = intro.querySelector(".intro-text");
+  const lastLine = introText?.querySelector("span:last-child");
+  if (!lastLine) return;
+
+  const styles = window.getComputedStyle(lastLine);
+  const firstAnimationDuration = styles.animationDuration.split(",")[0] || "0s";
+  const firstAnimationDelay = styles.animationDelay.split(",")[0] || "0s";
+  const toMs = (value) => {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? (value.trim().endsWith("ms") ? parsed : parsed * 1000) : 0;
+  };
+
+  const stopOnce = () => {
+    if (introMusicEnded) return;
+    if (introMusicStopTimer) {
+      clearTimeout(introMusicStopTimer);
+      introMusicStopTimer = undefined;
+    }
+    stopIntroMusic();
+    introMusicEnded = true;
+  };
+
+  lastLine.addEventListener(
+    "animationend",
+    (event) => {
+      if (event.animationName === "introReveal") {
+        stopOnce();
+      }
+    },
+    { once: true }
+  );
+
+  if (introMusicStopTimer) {
+    clearTimeout(introMusicStopTimer);
+  }
+
+  introMusicStopTimer = setTimeout(stopOnce, toMs(firstAnimationDuration) + toMs(firstAnimationDelay) + 120);
 }
 /* =========================
    PARTICLES
@@ -114,11 +157,7 @@ startBtn.onclick = function () {
   if (!introMusicEnded) {
     bgm.currentTime = 0;
     bgm.play().catch(() => {});
-
-    setTimeout(() => {
-      stopIntroMusic();
-      introMusicEnded = true;
-    }, 20000);
+    stopIntroMusicAfterIntroText();
   }
 
   setTimeout(() => {
@@ -1050,6 +1089,7 @@ return () => {
   if (floatingInterval) clearInterval(floatingInterval);
   if (gameInterval) clearInterval(gameInterval);
   if (timerInterval) clearInterval(timerInterval);
+  if (introMusicStopTimer) clearTimeout(introMusicStopTimer);
   aboutTypingTimeouts.forEach(timeout => clearTimeout(timeout));
   aboutTypingTimeouts = [];
   if (audioPlayer) audioPlayer.pause();

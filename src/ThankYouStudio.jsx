@@ -704,12 +704,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
                     </div>
                   </article>
                 ))
-              ) : (
-                <div className="thank-you-empty">
-                  <span>Nothing attached yet.</span>
-                  <p>Add a voice note, photo, video, or file when you’re ready.</p>
-                </div>
-              )}
+              ) : null}
             </div>
           </section>
 
