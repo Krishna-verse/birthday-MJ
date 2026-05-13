@@ -460,7 +460,12 @@ function startCardHeartRain() {
   }
 
   spawnCardHeart();
-  cardHeartIntervalId = setInterval(spawnCardHeart, 650);
+  spawnCardHeart();
+  spawnCardHeart();
+  cardHeartIntervalId = setInterval(() => {
+    spawnCardHeart();
+    spawnCardHeart();
+  }, 420);
 }
 
 function stopCardHeartRain() {

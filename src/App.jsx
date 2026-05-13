@@ -71,6 +71,7 @@ const cards = [
 ];
 
 const flowerAsset = '/mj_pic2.png';
+const heroBackgroundVideo = '/bg_video.mp4';
 const birthdayMonthIndex = 4;
 const birthdayDay = 29;
 const chatQuickActions = [
@@ -176,6 +177,10 @@ const getChatReply = (message) => {
 
   if (/(name|who are you|who is this|for)/.test(normalized)) {
     return 'This page is a little birthday love note for MJ. 💖';
+  }
+
+  if (/(thank you|thanks|thank u|thx)/.test(normalized)) {
+    return 'Always, cutie. 💖 Ask me anything else about the birthday page.';
   }
 
   if (/(hello|hi|hey|sup)/.test(normalized)) {
@@ -455,6 +460,17 @@ function BirthdayExperience({
 
       <div id="startScreen" className="center birthday-hero">
         <div className="birthday-hero__stage">
+          <video
+            className="birthday-hero__bg-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+          >
+            <source src={heroBackgroundVideo} />
+          </video>
           <div className="birthday-hero__content">
             <BirthdayCountdown now={clockNow} />
             <div className="birthday-hero__title-row">
