@@ -757,6 +757,62 @@ function BirthdayExperience({
   );
 }
 
+function SignOutConfirmModal({ open, busy, onCancel, onConfirm }) {
+  useEffect(() => {
+    if (!open) {
+      return () => {};
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onCancel]);
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div
+      className="sign-out-modal"
+      role="presentation"
+      onClick={onCancel}
+    >
+      <div
+        className="sign-out-modal__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="signOutTitle"
+        aria-describedby="signOutDesc"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sign-out-modal__badge">Session control</div>
+        <h2 id="signOutTitle">Sign out?</h2>
+        <p id="signOutDesc">
+          You’ll need to sign in again to get back into the birthday page.
+        </p>
+
+        <div className="sign-out-modal__actions">
+          <button className="sign-out-modal__button sign-out-modal__button--ghost" type="button" onClick={onCancel} disabled={busy}>
+            Cancel
+          </button>
+          <button className="sign-out-modal__button sign-out-modal__button--danger" type="button" onClick={onConfirm} disabled={busy}>
+            {busy ? 'Signing out...' : 'Sign out'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -776,6 +832,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [sessionMessage, setSessionMessage] = useState('');
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     const trimmedEmail = email.trim();
@@ -993,25 +1051,41 @@ export default function App() {
     setSessionMessage(`Fresh login link sent to ${targetEmail}. Check your inbox.`);
   };
 
-  const handleSignOut = async () => {
-    if (typeof window !== 'undefined') {
-      const shouldSignOut = window.confirm('Are you sure you want to sign out?');
-      if (!shouldSignOut) {
-        return;
-      }
+  const handleSignOutRequest = () => {
+    setSignOutConfirmOpen(true);
+  };
+
+  const handleSignOutCancel = () => {
+    if (signingOut) {
+      return;
     }
 
-    if (supabase) {
-      await supabase.auth.signOut();
+    setSignOutConfirmOpen(false);
+  };
+
+  const handleSignOut = async () => {
+    if (signingOut) {
+      return;
     }
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(LAST_SIGNED_IN_EMAIL_KEY);
+
+    setSigningOut(true);
+
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(LAST_SIGNED_IN_EMAIL_KEY);
+      }
+      setSession(null);
+      setRole(null);
+      setRoleLoading(false);
+      setActiveView('home');
+      setSessionMessage('');
+    } finally {
+      setSignOutConfirmOpen(false);
+      setSigningOut(false);
     }
-    setSession(null);
-    setRole(null);
-    setRoleLoading(false);
-    setActiveView('home');
-    setSessionMessage('');
   };
 
   const handleOpenAdminPage = () => {
@@ -1071,21 +1145,37 @@ export default function App() {
 
   if (activeView === 'admin' && role === 'admin') {
     return (
-      <AdminDashboard
-        onSignOut={handleSignOut}
-        onBackHome={() => setActiveView('home')}
-        userEmail={session.user?.email}
-      />
+      <>
+        <AdminDashboard
+          onSignOut={handleSignOutRequest}
+          onBackHome={() => setActiveView('home')}
+          userEmail={session.user?.email}
+        />
+        <SignOutConfirmModal
+          open={signOutConfirmOpen}
+          busy={signingOut}
+          onCancel={handleSignOutCancel}
+          onConfirm={handleSignOut}
+        />
+      </>
     );
   }
 
   return (
+    <>
       <BirthdayExperience
-        onSignOut={handleSignOut}
+        onSignOut={handleSignOutRequest}
         onOpenAdminPage={handleOpenAdminPage}
         userEmail={session.user?.email}
         isAdmin={role === 'admin'}
         sessionMessage={sessionMessage}
       />
+      <SignOutConfirmModal
+        open={signOutConfirmOpen}
+        busy={signingOut}
+        onCancel={handleSignOutCancel}
+        onConfirm={handleSignOut}
+      />
+    </>
   );
 }
