@@ -75,10 +75,13 @@ const heroBackgroundVideo = '/bg_video.mp4';
 const birthdayMonthIndex = 4;
 const birthdayDay = 29;
 const chatQuickActions = [
-  { label: '🎂 Birthday?', query: 'birthday' },
-  { label: '🎈 Age?', query: 'age' },
-  { label: '🎮 Hobbies?', query: 'hobbies' },
-  { label: '🎁 Surprise?', query: 'gift' },
+  { label: '🎁 Surprise clue', query: 'What should I open first?' },
+  { label: '🎂 Birthday date', query: 'birthday date' },
+  { label: '👀 Made by?', query: 'who made this site' },
+  { label: '🖤 Memories', query: 'memories' },
+  { label: '🎵 Playlist', query: 'music' },
+  { label: '🫶 About you', query: 'about you' },
+  { label: '😏 Rizz', query: 'give me rizz' },
 ];
 
 const cardFloatStyles = [
@@ -156,15 +159,15 @@ const getChatReply = (message) => {
   const normalized = message.trim().toLowerCase();
 
   if (!normalized) {
-    return 'Try asking about the birthday, age, hobbies, or the surprise. 💬';
+    return 'Try asking about the birthday or the hidden surprise. 💬';
   }
 
   if (/(birthday|date|when)/.test(normalized)) {
-    return '7th April, the day we are celebrating here. 🎉';
+    return '7th April is the day we are celebrating here. 🎉';
   }
 
   if (/(age|old|years?)/.test(normalized)) {
-    return 'A beautiful legend in the making. 😌';
+    return 'A beautiful legend in the making. 😌\nStill collecting iconic moments, obviously.';
   }
 
   if (/(hobby|hobbies|like|love|interest)/.test(normalized)) {
@@ -176,27 +179,53 @@ const getChatReply = (message) => {
   }
 
   if (/(name|who are you|who is this|for)/.test(normalized)) {
-    return 'This page is a little birthday love note for MJ. 💖';
+    return 'This page is a little birthday love note for MJ. 💖\nMade to feel personal, playful, and a tiny bit extra.';
+  }
+
+  if (/(who made this site|who made this|made this site|who created this site|created this site|owner|creator|mader|maker|how to made|how it made|how was this made|how is this made)/.test(normalized)) {
+    return 'Your loved one made this site. 💖';
   }
 
   if (/(thank you|thanks|thank u|thx)/.test(normalized)) {
-    return 'Always, cutie. 💖 Ask me anything else about the birthday page.';
+    return 'Always, cutie. 💖\nAsk me anything else about the birthday page.';
+  }
+
+  if (/(memories|memory|moments|reminisc|nostalg)/.test(normalized)) {
+    return 'Open Memories if you want the softest part of the page. 🖤';
+  }
+
+  if (/(music|song|playlist|track|play)/.test(normalized)) {
+    return 'The Music Player card is where the vibes live. 🎵';
+  }
+
+  if (/(about you|about|facts|cute facts)/.test(normalized)) {
+    return 'About You is the sweet little ego boost section. 🫶';
+  }
+
+  if (/(rizz|smooth|line|flirt)/.test(normalized)) {
+    return 'Rizz for You is for dramatic entrance energy. 😏';
+  }
+
+  if (/(what should i open first|where should i start|start|first)/.test(normalized)) {
+    return 'Start with Wishes, then About You, then Memories. 🎀';
   }
 
   if (/(hello|hi|hey|sup)/.test(normalized)) {
-    return 'Hi hi! Ask me anything about the birthday page. 💬';
+    return 'Hi hi! Birthday guide online. 💬';
   }
 
-  return 'I’m mostly here for birthday details, hobbies, and the little surprises around the page. Ask me one of those and I’ll spill the tea. 😉';
+  return 'I’m mostly here for birthday details and the little surprises around the page. 😉';
 };
+
+const initialChatMessages = [
+  { role: 'assistant', text: 'Hi! 👋 I’m your birthday guide.\nType a question or tap one of the buttons below.' },
+];
 
 function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Hi! 👋 Choose a question or type one below.' },
-  ]);
+  const [messages, setMessages] = useState(initialChatMessages);
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
 
@@ -234,6 +263,12 @@ function ChatWidget() {
     }, 650);
   };
 
+  const resetChat = () => {
+    setMessages(initialChatMessages);
+    setDraft('');
+    setIsTyping(false);
+  };
+
   return (
     <>
       <button
@@ -244,31 +279,51 @@ function ChatWidget() {
         aria-label={open ? 'Close chat' : 'Open chat'}
         onClick={() => setOpen((value) => !value)}
       >
-        💬
+        <span className="chat-toggle__icon" aria-hidden="true">
+          💬
+        </span>
+        <span className="chat-toggle__pulse" aria-hidden="true" />
       </button>
 
       <section
         id="chatbot"
+        className={open ? 'is-open' : ''}
         aria-hidden={!open}
-        style={{ display: open ? 'flex' : 'none', flexDirection: 'column' }}
       >
-        <div id="chatHeader">🤖 Ask About Me</div>
+        <div id="chatHeader">
+          <div className="chat-header__copy">
+            <span className="chat-header__eyebrow">Birthday guide</span>
+            <strong>Ask About Me</strong>
+          </div>
+          <button className="chat-header__reset" type="button" onClick={resetChat} aria-label="Reset chat">
+            Reset
+          </button>
+        </div>
 
         <div id="chatBody">
-          <div className="chat-log">
+          <div className="chat-log" role="log" aria-live="polite" aria-relevant="additions text">
             {messages.map((message, index) => (
-              <div
-                key={`${message.role}-${index}-${message.text}`}
-                className={`chat-msg chat-msg--${message.role}`}
-              >
-                {message.text}
+              <div key={`${message.role}-${index}-${message.text}`} className={`chat-msg-row chat-msg-row--${message.role}`}>
+                <span className="chat-avatar" aria-hidden="true">
+                  {message.role === 'assistant' ? 'AI' : 'You'}
+                </span>
+                <div className={`chat-msg chat-msg--${message.role}`}>
+                  {message.text}
+                </div>
               </div>
             ))}
-            {isTyping ? <div className="typing">🤖 Typing</div> : null}
+            {isTyping ? (
+              <div className="chat-msg-row chat-msg-row--assistant">
+                <span className="chat-avatar" aria-hidden="true">
+                  AI
+                </span>
+                <div className="chat-msg chat-msg--assistant typing">Typing</div>
+              </div>
+            ) : null}
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="quick-btns">
+          <div className="quick-btns" aria-label="Suggested questions">
             {chatQuickActions.map((action) => (
               <button key={action.query} type="button" onClick={() => sendMessage(action.query)}>
                 {action.label}

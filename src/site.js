@@ -1078,8 +1078,10 @@ function startFloatingEffects() {
 const footer = document.createElement("footer");
 footer.className = "site-footer";
 footer.innerHTML = `
-  <p>💖 Made for Someone Special ✨</p>
-  <span>------------</span>
+  <div class="site-footer__inner">
+    <span class="site-footer__badge">Made with love</span>
+    <p>Happy Birthday, MJ</p>
+  </div>
 `;
 mainContent.appendChild(footer);
 
