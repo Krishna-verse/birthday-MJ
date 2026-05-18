@@ -477,10 +477,6 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
     }
   }
 
-  function clearDraft() {
-    resetDraft(false);
-  }
-
   async function handleSend() {
     if (!supabase) {
       setError('This feature is not ready yet.');
@@ -812,11 +808,6 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
               </div>
             ) : null}
 
-            <div className="thank-you-compose__meta">
-              <span className="thank-you-compose__pill">{userEmail || 'Guest'}</span>
-              <span className="thank-you-compose__pill">Ready to send</span>
-            </div>
-
             <div className="thank-you-attachments">
               {attachments.length ? (
                 attachments.map((item) => (
@@ -849,36 +840,6 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
               ) : null}
             </div>
           </section>
-
-          <aside className="thank-you-tool">
-            {activeTool === 'text' ? (
-              <div className="thank-you-tool__panel">
-                <h3>Text mode</h3>
-                <p>Type your message in the left panel.</p>
-              </div>
-            ) : null}
-
-            {activeTool === 'voice' ? (
-              <div className="thank-you-tool__panel">
-                <h3>Voice mode</h3>
-                <p>Your recorder is on the left.</p>
-              </div>
-            ) : null}
-
-            {activeTool === 'camera' ? (
-              <div className="thank-you-tool__panel">
-                <h3>Camera mode</h3>
-                <p>Open the camera from the left panel and capture a photo or clip.</p>
-              </div>
-            ) : null}
-
-            {activeTool === 'upload' ? (
-              <div className="thank-you-tool__panel">
-                <h3>Upload files</h3>
-                <p>Your files go in the left panel.</p>
-              </div>
-            ) : null}
-          </aside>
         </div>
 
         {status || error ? (
@@ -888,9 +849,6 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
         ) : null}
 
         <div className="thank-you-modal__footer">
-          <button type="button" className="thank-you-ghost-btn" onClick={clearDraft}>
-            Clear Draft
-          </button>
           <button type="button" className="thank-you-submit-btn" onClick={handleSend} disabled={uploading || !open}>
             {uploading ? 'Sending...' : 'Send it...'}
           </button>

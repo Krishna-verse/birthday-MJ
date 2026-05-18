@@ -1,4 +1,4 @@
-export function initBirthdaySite() {
+﻿export function initBirthdaySite() {
 /* =========================
    DOM ELEMENTS
 ========================= */
@@ -229,7 +229,7 @@ function spawnPetals() {
     return;
   }
 
-  const petals = ["🌸", "✨", "🎊", "⭐", "💛", "🎈", "🌟", "💫", "🎉"];
+  const petals = ["ðŸŒ¸", "âœ¨", "ðŸŽŠ", "â­", "ðŸ’›", "ðŸŽˆ", "ðŸŒŸ", "ðŸ’«", "ðŸŽ‰"];
 
   for (let i = 0; i < 18; i++) {
     const petal = document.createElement("span");
@@ -452,7 +452,7 @@ function updateCountdown() {
   let gap = targetDate - now;
 
   if (gap <= 0) {
-    countdownEl.innerHTML = "🎉 It's Today! 🎉";
+    countdownEl.innerHTML = "ðŸŽ‰ It's Today! ðŸŽ‰";
     return;
   }
 
@@ -461,7 +461,7 @@ function updateCountdown() {
   let m = Math.floor((gap % (1000 * 60 * 60)) / (1000 * 60));
   let s = Math.floor((gap % (1000 * 60)) / 1000);
 
-  countdownEl.innerHTML = `⏳ ${d} Days ${h}h ${m}m ${s}s left`;
+  countdownEl.innerHTML = `â³ ${d} Days ${h}h ${m}m ${s}s left`;
 }
 if (countdownEl) {
   countdownIntervalId = setInterval(updateCountdown, 1000);
@@ -474,20 +474,20 @@ if (countdownEl) {
 let pageURL = window.location.href;
 
 function shareWhatsApp() {
-  let text = "🎉 Check out this amazing birthday page! 🎂👇\n" + pageURL;
+  let text = "ðŸŽ‰ Check out this amazing birthday page! ðŸŽ‚ðŸ‘‡\n" + pageURL;
   let url = "https://wa.me/?text=" + encodeURIComponent(text);
   window.open(url, "_blank");
 }
 
 function copyLink() {
   navigator.clipboard.writeText(pageURL);
-  document.getElementById("copyMsg").innerText = "✅ Link Copied!";
+  document.getElementById("copyMsg").innerText = "âœ… Link Copied!";
 }
 
 function nativeShare() {
   if (navigator.share) {
     navigator.share({
-      title: "Birthday Celebration 🎉",
+      title: "Birthday Celebration ðŸŽ‰",
       text: "Check out this awesome birthday page!",
       url: pageURL
     });
@@ -514,28 +514,28 @@ function quickReply(type) {
   let reply = "";
 
   if (type === "birthday") {
-    userText = "🎂 Birthday?";
-    reply = "7th April 🎉";
+    userText = "ðŸŽ‚ Birthday?";
+    reply = "7th April ðŸŽ‰";
   } else if (type === "age") {
-    userText = "🎈 Age?";
-    reply = "A beautiful legend growing  😎";
+    userText = "ðŸŽˆ Age?";
+    reply = "A beautiful legend growing  ðŸ˜Ž";
   } else if (type === "hobby") {
-    userText = "🎮 Hobbies?";
-    reply = "Gaming, fun, vibes and making memories ✨";
+    userText = "ðŸŽ® Hobbies?";
+    reply = "Gaming, fun, vibes and making memories âœ¨";
   }
 
   chatBody.innerHTML += `<div class="user-msg">${userText}</div>`;
 
   let typingDiv = document.createElement("div");
   typingDiv.className = "typing";
-  typingDiv.innerText = "🤖 Typing";
+  typingDiv.innerText = "ðŸ¤– Typing";
   chatBody.appendChild(typingDiv);
 
   chatBody.scrollTop = chatBody.scrollHeight;
 
   setTimeout(() => {
     typingDiv.remove();
-    chatBody.innerHTML += `<div class="bot-msg">🤖 ${reply}</div>`;
+    chatBody.innerHTML += `<div class="bot-msg">ðŸ¤– ${reply}</div>`;
     chatBody.scrollTop = chatBody.scrollHeight;
   }, 1200);
 }
@@ -721,7 +721,7 @@ function createObject() {
   let obj = document.createElement("div");
   let isBomb = Math.random() < 0.2;
 
-  obj.innerText = isBomb ? "💣" : "🎂";
+  obj.innerText = isBomb ? "ðŸ’£" : "ðŸŽ‚";
   obj.className = isBomb ? "bomb" : "cake";
 
   obj.style.left = Math.random() * 90 + "%";
@@ -763,7 +763,7 @@ function loadLeaderboard() {
   let scores = JSON.parse(localStorage.getItem("leaderboard")) || [];
   leaderboardEl.innerHTML = "";
   scores.forEach((s, i) => {
-    leaderboardEl.innerHTML += `<li>🏅 ${i + 1}. ${s}</li>`;
+    leaderboardEl.innerHTML += `<li>ðŸ… ${i + 1}. ${s}</li>`;
   });
 }
 
@@ -775,26 +775,26 @@ let rizzOutput = document.getElementById("rizzOutput");
 let heartBurstContainer = document.getElementById("heartBurstContainer");
 
 const rizzLines = [
-  "Are you my favorite song? Because I could listen to you forever. 💖",
-  "You walked into my life and suddenly everything felt brighter. ✨",
-  "If I had one wish, I’d spend every birthday with you. 🎂",
-  "You’re the kind of person my heart would always choose. ❤️",
-  "Are you WiFi? Because I’m feeling a strong connection. 📶😂",
-  "Do you believe in love at first sight, or should I walk by again? 😏",
-  "You must be a magician, because whenever I see you, everyone else disappears. 🎩",
-  "You must be a keyboard, because you’re just my type. ⌨️😂",
-  "Are you cheese? Because you make everything better. 🧀",
-  "If beauty were time, you’d be eternity. ⏳",
-  "You must be made of stars, because you light up everything. 🌟",
-  "You stole my heart... should I call the police? 🚔❤️",
-  "You look like trouble... and honestly, I like that. 😉",
-  "If I flirt any harder, this page might catch fire. 🔥",
-  "You’re dangerously cute, and I’m not complaining. 😌",
-  "I was doing fine until you showed up looking like that. 😏",
-  "Are you JavaScript? Because you make my heart asynchronous. 💻❤️",
-  "You must be a function, because you complete my life. 🤓",
-  "Are you CSS? Because you’ve styled my whole mood. 🎨",
-  "You’re like clean code — rare and beautiful. ✨"
+  "Are you my favorite song? Because I could listen to you forever. ðŸ’–",
+  "You walked into my life and suddenly everything felt brighter. âœ¨",
+  "If I had one wish, Iâ€™d spend every birthday with you. ðŸŽ‚",
+  "Youâ€™re the kind of person my heart would always choose. â¤ï¸",
+  "Are you WiFi? Because Iâ€™m feeling a strong connection. ðŸ“¶ðŸ˜‚",
+  "Do you believe in love at first sight, or should I walk by again? ðŸ˜",
+  "You must be a magician, because whenever I see you, everyone else disappears. ðŸŽ©",
+  "You must be a keyboard, because youâ€™re just my type. âŒ¨ï¸ðŸ˜‚",
+  "Are you cheese? Because you make everything better. ðŸ§€",
+  "If beauty were time, youâ€™d be eternity. â³",
+  "You must be made of stars, because you light up everything. ðŸŒŸ",
+  "You stole my heart... should I call the police? ðŸš”â¤ï¸",
+  "You look like trouble... and honestly, I like that. ðŸ˜‰",
+  "If I flirt any harder, this page might catch fire. ðŸ”¥",
+  "Youâ€™re dangerously cute, and Iâ€™m not complaining. ðŸ˜Œ",
+  "I was doing fine until you showed up looking like that. ðŸ˜",
+  "Are you JavaScript? Because you make my heart asynchronous. ðŸ’»â¤ï¸",
+  "You must be a function, because you complete my life. ðŸ¤“",
+  "Are you CSS? Because youâ€™ve styled my whole mood. ðŸŽ¨",
+  "Youâ€™re like clean code â€” rare and beautiful. âœ¨"
 ];
 
 let lastRizzIndex = -1;
@@ -825,7 +825,7 @@ generateRizzBtn.addEventListener("click", () => {
   rizzOutput.innerHTML = `
     <div class="rizz-card">
       <div id="rizzText" class="rizz-text typing-cursor"></div>
-      <button id="copyRizzBtn" class="copy-btn" style="display:none;">📋 Copy</button>
+      <button id="copyRizzBtn" class="copy-btn" style="display:none;">ðŸ“‹ Copy</button>
     </div>
   `;
 
@@ -837,8 +837,8 @@ generateRizzBtn.addEventListener("click", () => {
       const text = document.getElementById("rizzText").innerText;
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById("copyRizzBtn");
-        btn.textContent = "✅ Copied!";
-        setTimeout(() => btn.textContent = "📋 Copy", 2000);
+        btn.textContent = "âœ… Copied!";
+        setTimeout(() => btn.textContent = "ðŸ“‹ Copy", 2000);
       });
     });
   });
@@ -872,7 +872,7 @@ function typeWriterEffect(text, element, callback) {
 }
 
 function heartBurst() {
-  const hearts = ["💖", "💘", "💕", "❤️", "💞"];
+  const hearts = ["ðŸ’–", "ðŸ’˜", "ðŸ’•", "â¤ï¸", "ðŸ’ž"];
 
   for (let i = 0; i < 14; i++) {
     const heart = document.createElement("span");
@@ -904,7 +904,7 @@ function fireHeartBurst(count = 14) {
     return;
   }
 
-  const hearts = ["💖", "💘", "💕", "❤️", "💞"];
+  const hearts = ["ðŸ’–", "ðŸ’˜", "ðŸ’•", "â¤ï¸", "ðŸ’ž"];
 
   for (let i = 0; i < count; i++) {
     const heart = document.createElement("span");
@@ -938,10 +938,10 @@ function fireHeartBurst(count = 14) {
 bgToggleLink.onclick = () => {
   if (bgLoop.paused) {
     bgLoop.play();
-    bgToggleLink.innerText = "⏸ Pause";
+    bgToggleLink.innerText = "â¸ Pause";
   } else {
     bgLoop.pause();
-    bgToggleLink.innerText = "▶ Play";
+    bgToggleLink.innerText = "â–¶ Play";
   }
 };
 
@@ -1002,8 +1002,8 @@ function updateMusicUI() {
   if (!songTitle || !songStatus || !playBtn || !playlistCount) return;
   songTitle.textContent = songs[currentSong].title;
   playlistCount.textContent = `${currentSong + 1} / ${songs.length}`;
-  playBtn.textContent = isPlaying ? "⏸" : "▶";
-  songStatus.textContent = isPlaying ? "Now Playing 🎶" : "Paused ⏸";
+  playBtn.textContent = isPlaying ? "â¸" : "â–¶";
+  songStatus.textContent = isPlaying ? "Now Playing ðŸŽ¶" : "Paused â¸";
 }
 
 audioPlayer.onended = () => {
@@ -1096,45 +1096,55 @@ updateMusicUI();
    ABOUT YOU POPUP
 ========================= */
 const aboutPoints = [
-  "• Dominant",
-  "• Overthinker",
-  "• Two Sisters",
-  "• Love manga (BL also)",
-  "• Loves to play OWO, Among Us",
-  "• Don't like flirting",
-  "• Dude not miss",
-  "• Vibe Checking Secretly",
-  "• Birthday on 7th April",
-  "• Don't like Krishna's humor",
-  "• Do sarcasm",
-  "• Devil",
-  "• Wants to learn editing",
-  "• Went dance class 5 to 6",
-  "• Likes non veg",
-  "• Have two babies (Turtles)",
-  "• Ailurophile (love cats)",
-  "• Melophile (love music)",
-  "• Preparing for CET",
-  "• Don't wanna tell boards mark",
-  "• Study in class 12th and exam is near",
+  "• Samruddhi Ghanshyam Burde (#samu)",
+  "• So Vincenzo (fav kdrama) se----- vin + cenzo----cenzo----senzo(s mera name ka first letter hai)-----senoo(sound acha kar raha tha😂)",
+  "• Opposite of Honey bunn",
+  "• Follow Take respect, give respect formula",
+  "• Completed class 12th and wants to get into IT",
+  "• Actual interest to be a Hacker",
+  "• Wanna go in cyber",
+  "• DOB =May 29 , 2008",
+  "• play CODM",
+  "• Have one big brother(Himanshu)",
+  "• Bahut shariff😉",
+  "• likes butterscotch icecream",
+  "• likes grey colour",
+  "• Surname = Burde",
+  "• I met her on 13/04/2026 on behalf of blocked by Honey bunn",
+  "• Time = 1:51 She confronts me and said (. .... ...) on 30th April 2026",
+  "• shoe size 7 no.",
+  "• overthinker",
+  "• submissive baddie",
+  "• likes colour grey",
+  "• loves butterscotch icecream",
+  "• introvert",
+  "• fav. Series = Vincenzo",
+  "• fav. Food = Biryani (Chicken)",
+  "• Boa Hancock",
+  "• Osara",
+  "• MJ",
+  "• Kanojo",
+  "• wants to make parents proud",
+  "• loves to play CODM",
+  "• likes to do writing",
+  "• It's me or them (story written by her)",
+  "• Overshare",
+  "• what's her type? = The one respects her and one who won't cheat, understand her and love her (Sam Words)",
+  "• Swimming class 5 to 6 o'clock in Evening",
+  "• Mom is strict",
+  "• very emotional towards the person she loves",
+  "• likes coffee",
+  "• Loves to explore new things",
+  "• Under confident but try to be confident 👌",
+  "• negative thinking 😑(Generally)",
+  "• Sweetheart ❤️‍🩹",
+  "• Kind hearted 🩶",
+  "• Live in Nagpur, Maharashtra",
+  "• Use LHS = RHS formula IRL🙃",
+  "• Video Editor",
+  "• Quakwhooooooooo",
   "• Marathi Mulgi",
-  "• Ambivert",
-  "• Nalli",
-  "• Don't like changing People (Dogle log)",
-  "• Height 5'5'' or 5'6''",
-  "• Wanna try All water sports",
-  "• Wheelie on Bike",
-  "• Hangout with Friends (including me 😑)",
-  "• Wanna do Go Karting",
-  "• Bunji Jumping",
-  "• Sky Diving",
-  "• Wanna Travel alone",
-  "• Want peace but also kick",
-  "• Mood Swings (Typical Mahila)",
-  "• Car Drifting",
-  "• We meet online on 27th March 2026",
-  "• Time = 11:26",
-  "• Black, white, and gray are most fav. colours, followed by silver!"
+  "• Gamer 💝"
 ];
 const aboutContent = document.querySelector("#aboutPopup .about-content");
 
@@ -1217,7 +1227,7 @@ function startFloatingEffects() {
   const container = document.getElementById("aboutImageWrap");
   if (!container) return;
   floatingInterval = setInterval(() => {
-    const symbols = ["💖", "✨", "🌸", "⭐", "💘"];
+    const symbols = ["ðŸ’–", "âœ¨", "ðŸŒ¸", "â­", "ðŸ’˜"];
     const item = document.createElement("span");
     item.className = "floating-item";
     item.textContent = symbols[Math.floor(Math.random() * symbols.length)];
@@ -1279,4 +1289,5 @@ return () => {
   if (stopCosmicBackdrop) stopCosmicBackdrop();
 };
 }
+
 
