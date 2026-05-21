@@ -581,18 +581,18 @@ function quickReply(type) {
    CONFETTI
 ========================= */
 function dropTopConfetti() {
-  if (isMobilePerformanceMode || typeof confetti !== "function") {
+  if (prefersReducedMotion || typeof confetti !== "function") {
     return;
   }
 
   confetti({
-    particleCount: 12,
+    particleCount: isMobilePerformanceMode ? 7 : 12,
     angle: 90,
-    spread: 28,
-    startVelocity: 22,
+    spread: isMobilePerformanceMode ? 22 : 28,
+    startVelocity: isMobilePerformanceMode ? 18 : 22,
     gravity: 1.15,
-    ticks: 180,
-    scalar: 0.72,
+    ticks: isMobilePerformanceMode ? 130 : 180,
+    scalar: isMobilePerformanceMode ? 0.58 : 0.72,
     origin: {
       x: 0.1 + Math.random() * 0.8,
       y: 0
@@ -601,23 +601,33 @@ function dropTopConfetti() {
 }
 
 function sideConfetti() {
-  if (isMobilePerformanceMode || typeof confetti !== "function") {
+  if (prefersReducedMotion || typeof confetti !== "function") {
     return;
   }
 
-  for (let i = 0; i < 3; i++) {
+  const bursts = isMobilePerformanceMode ? 2 : 3;
+  const particleCount = isMobilePerformanceMode ? 70 : 250;
+  const spread = isMobilePerformanceMode ? 62 : 90;
+  const scalar = isMobilePerformanceMode ? 0.62 : 1;
+  const startVelocity = isMobilePerformanceMode ? 34 : 45;
+
+  for (let i = 0; i < bursts; i++) {
     setTimeout(() => {
       confetti({
-        particleCount: 250,
+        particleCount,
         angle: 60,
-        spread: 90,
+        spread,
+        scalar,
+        startVelocity,
         origin: { x: 0 }
       });
 
       confetti({
-        particleCount: 250,
+        particleCount,
         angle: 120,
-        spread: 90,
+        spread,
+        scalar,
+        startVelocity,
         origin: { x: 1 }
       });
     }, i * 300);
@@ -628,7 +638,7 @@ function sideConfetti() {
   }
 
   dropTopConfetti();
-  confettiRainIntervalId = setInterval(dropTopConfetti, 2200);
+  confettiRainIntervalId = setInterval(dropTopConfetti, isMobilePerformanceMode ? 3600 : 2200);
 }
 
 function fireCardOpenConfetti() {
