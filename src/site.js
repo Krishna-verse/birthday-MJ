@@ -50,6 +50,16 @@ let introCandleTimer;
 let introCutTimer;
 const cardHeartLayer = document.getElementById("heartFloatLayer");
 
+function resumeBackgroundLoop() {
+  if (!bgLoop || isPlaying) {
+    return;
+  }
+
+  const mainIsVisible = mainContent && window.getComputedStyle(mainContent).display !== "none";
+  if (mainIsVisible) {
+    bgLoop.play().catch(() => {});
+  }
+}
 
 function stopIntroMusic() {
   bgm.pause();
@@ -437,6 +447,7 @@ const overlayClickHandler = () => {
     isPlaying = false;
     updateMusicUI();
     stopMusicEmojiFloat();
+    resumeBackgroundLoop();
   }
 };
 overlay.addEventListener("click", overlayClickHandler);
@@ -447,7 +458,6 @@ overlay.addEventListener("click", overlayClickHandler);
 wishCard.onclick = () => openPopup(wishPopup);
 musicCard.onclick = () => {
   stopIntroMusic();
-  bgLoop.pause(); // Pause background loop when music player opens
   openPopup(musicPopup);
 };
 memoriesCard.onclick = () => openPopup(memoriesPopup);
@@ -1034,6 +1044,7 @@ function closeMusic() {
     updateMusicUI();
   }
   stopMusicEmojiFloat();
+  resumeBackgroundLoop();
 }
 /* =========================
    YOUTUBE MUSIC PLAYER
@@ -1180,6 +1191,7 @@ function playSong() {
   if (bgm) {
     bgm.pause();
   }
+  bgLoop.pause();
   if (!audioPlayer.src) {
     audioPlayer.src = songs[currentSong].url;
     audioPlayer.load();
@@ -1193,6 +1205,7 @@ function playSong() {
       }
       updateMusicUI();
       stopMusicEmojiFloat();
+      resumeBackgroundLoop();
     });
   }
   isPlaying = true;
@@ -1205,6 +1218,7 @@ function pauseSong() {
   isPlaying = false;
   updateMusicUI();
   stopMusicEmojiFloat();
+  resumeBackgroundLoop();
 }
 
 function loadSong(index, autoplay = true) {
@@ -1216,6 +1230,7 @@ function loadSong(index, autoplay = true) {
     audioPlayer.pause();
     isPlaying = false;
   } else {
+    bgLoop.pause();
     audioPlayer.currentTime = 0;
     const playPromise = audioPlayer.play();
     if (playPromise?.catch) {
@@ -1226,6 +1241,7 @@ function loadSong(index, autoplay = true) {
         }
         updateMusicUI();
         stopMusicEmojiFloat();
+        resumeBackgroundLoop();
       });
     }
     isPlaying = true;
