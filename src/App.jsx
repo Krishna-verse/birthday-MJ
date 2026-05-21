@@ -97,6 +97,7 @@ const heroBackgroundVideo = '/bg_video.mp4';
 const birthdayMonthIndex = 3;
 const birthdayDay = 7;
 const chatQuickActions = [
+  { label: '✨ Who is MJ?', query: 'who is MJ' },
   { label: '🎁 Surprise clue', query: 'What should I open first?' },
   { label: '🎂 Birthday date', query: 'birthday date' },
   { label: '👀 Made by?', query: 'who made this site' },
@@ -226,6 +227,10 @@ const getChatReply = (message) => {
     return 'Open the cards around the page. The surprise is hiding in plain sight. 🎁';
   }
 
+  if (/(who is|who's|about|tell me about).*\b(samruddhi|sam|mj)\b|\b(samruddhi|sam|mj)\b.*(who is|who's|about)/.test(normalized)) {
+    return 'Samruddhi, Sam, and MJ are the same special person here. 💖\nHer full name is Samruddhi Ghanshyam Burde, and MJ is the sweet nickname this birthday page celebrates.';
+  }
+
   if (/(name|who are you|who is this|for)/.test(normalized)) {
     return 'This page is a little birthday love note for MJ. 💖\nMade to feel personal, playful, and a tiny bit extra.';
   }
@@ -325,6 +330,7 @@ function ChatWidget() {
     <>
       <button
         id="chatToggle"
+        className={open ? 'is-open' : ''}
         type="button"
         aria-expanded={open}
         aria-controls="chatbot"
@@ -332,9 +338,9 @@ function ChatWidget() {
         onClick={() => setOpen((value) => !value)}
       >
         <span className="chat-toggle__icon" aria-hidden="true">
-          💬
+          {open ? '×' : '💬'}
         </span>
-        <span className="chat-toggle__pulse" aria-hidden="true" />
+        {!open ? <span className="chat-toggle__pulse" aria-hidden="true" /> : null}
       </button>
 
       <section
