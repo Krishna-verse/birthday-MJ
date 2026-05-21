@@ -854,6 +854,11 @@ function BirthdayExperience({
             <p>💖 May life give you peace, success, and endless happiness.</p>
             <p>🌸 May every dream you have slowly turn into reality.</p>
             <p>🎂 And may this year be kinder, sweeter, and more beautiful for you.</p>
+            <p>🌸Happy Birthday to the most special girl in my life 🥰🩶</p>
+<p>💖Every moment with you feels like something I never want to lose ❣️</p>
+<p>🎂I am grateful for your smile, your care, your madness, and even your stubbornness❤️</p>
+<p>✨I just want to keep making memories with you 🥰</p>
+<p>🌸Today is your day, and I hope you feel loved every second of it🩶😉</p>
           </div>
         </div>
 
@@ -898,6 +903,13 @@ function BirthdayExperience({
                 <span id="musicCurrentTime">0:00</span>
                 <span id="musicDuration">0:00</span>
               </div>
+            </div>
+
+            <div className="music-player__volume">
+              <span className="music-player__volume-icon" aria-hidden="true">🔊</span>
+              <label htmlFor="musicVolume">Volume</label>
+              <input id="musicVolume" type="range" min="0" max="100" defaultValue="85" aria-label="Music volume" />
+              <span id="musicVolumeValue">85%</span>
             </div>
 
             <div className="music-controls" aria-label="Music controls">

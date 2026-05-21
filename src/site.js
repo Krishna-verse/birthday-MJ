@@ -379,7 +379,9 @@ startBtn.onclick = function () {
     }
     mainContent.style.display = "flex";
     window.dispatchEvent(new CustomEvent("birthday:home-visible"));
-    bgLoop.play().catch(() => {});
+    if (!isPlaying) {
+      bgLoop.play().catch(() => {});
+    }
     sideConfetti();
   }, 10500);
 };
@@ -1038,11 +1040,11 @@ function closeMusic() {
   stopIntroMusic(); // force stop bgm too
   closePopup(musicPopup);
 
-  if (audioPlayer && isPlaying) {
+  if (audioPlayer) {
     audioPlayer.pause();
-    isPlaying = false;
-    updateMusicUI();
   }
+  isPlaying = false;
+  updateMusicUI();
   stopMusicEmojiFloat();
   resumeBackgroundLoop();
 }
@@ -1051,8 +1053,8 @@ function closeMusic() {
 ========================= */
 const songs = [
   {
-    title: "Birthday Track 1",
-    url: "/1.mp3"
+    title: "My Baby",
+    url: "/my baby.mp3.mpeg"
   },
   {
     title: "Birthday Track 2",
@@ -1074,6 +1076,7 @@ const songs = [
 
 let audioPlayer = new Audio();
 audioPlayer.preload = "auto";
+audioPlayer.volume = 0.85;
 let currentSong = 0;
 let isPlaying = false;
 
@@ -1088,6 +1091,8 @@ const musicCurrentTime = document.getElementById("musicCurrentTime");
 const musicDuration = document.getElementById("musicDuration");
 const musicTrackList = document.getElementById("musicTrackList");
 const musicEmojiLayer = document.getElementById("musicEmojiLayer");
+const musicVolume = document.getElementById("musicVolume");
+const musicVolumeValue = document.getElementById("musicVolumeValue");
 
 function formatTrackTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) {
@@ -1143,6 +1148,19 @@ function updateMusicUI() {
   updateMusicProgress();
 }
 
+function updateMusicVolume(value) {
+  const parsedValue = Number.parseInt(value, 10);
+  const volume = Number.isFinite(parsedValue)
+    ? Math.min(100, Math.max(0, parsedValue))
+    : 85;
+
+  audioPlayer.volume = volume / 100;
+
+  if (musicVolumeValue) {
+    musicVolumeValue.textContent = `${volume}%`;
+  }
+}
+
 function spawnMusicEmoji() {
   if (!musicEmojiLayer || !musicPopup?.classList.contains("show-popup")) {
     return;
@@ -1196,6 +1214,7 @@ function playSong() {
     audioPlayer.src = songs[currentSong].url;
     audioPlayer.load();
   }
+  isPlaying = true;
   const playPromise = audioPlayer.play();
   if (playPromise?.catch) {
     playPromise.catch(() => {
@@ -1208,7 +1227,6 @@ function playSong() {
       resumeBackgroundLoop();
     });
   }
-  isPlaying = true;
   updateMusicUI();
   startMusicEmojiFloat();
 }
@@ -1231,7 +1249,9 @@ function loadSong(index, autoplay = true) {
     isPlaying = false;
   } else {
     bgLoop.pause();
+    if (bgm) bgm.pause();
     audioPlayer.currentTime = 0;
+    isPlaying = true;
     const playPromise = audioPlayer.play();
     if (playPromise?.catch) {
       playPromise.catch(() => {
@@ -1244,7 +1264,6 @@ function loadSong(index, autoplay = true) {
         resumeBackgroundLoop();
       });
     }
-    isPlaying = true;
     startMusicEmojiFloat();
   }
 
@@ -1276,6 +1295,13 @@ nextBtn.addEventListener("click", () => {
 prevBtn.addEventListener("click", () => {
   prevSong();
 });
+
+if (musicVolume) {
+  updateMusicVolume(musicVolume.value);
+  musicVolume.addEventListener("input", (event) => {
+    updateMusicVolume(event.target.value);
+  });
+}
 
 updateMusicUI();
 
