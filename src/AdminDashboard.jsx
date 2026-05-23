@@ -61,6 +61,7 @@ const getDownloadName = (item) => item.name || item.path?.split('/').pop() || 'd
 
 const getRowSearchText = (row) =>
   [
+    row.user_email,
     row.message,
     ...(row.attachment_meta || []).map((attachment) => attachment.name),
   ]
@@ -217,12 +218,17 @@ function buildGroups(rows, query, filterMode) {
 }
 
 function GroupSubmissionCard({ row, signedUrls }) {
+  const senderEmail = row.user_email?.trim();
+
   return (
     <article className="admin-submission admin-submission--compact" key={row.id || row.bundle_id}>
       <div className="admin-submission__header">
         <div>
           <span className="admin-submission__badge">{getSubmissionLabel(row)}</span>
           <h3>{row.created_at ? timeFormatter.format(new Date(row.created_at)) : 'Time not saved'}</h3>
+          <p className="admin-submission__sender">
+            Sender: <strong>{senderEmail || 'Email not saved'}</strong>
+          </p>
         </div>
       </div>
 
@@ -237,12 +243,14 @@ function GroupSubmissionCard({ row, signedUrls }) {
           row.attachmentItems.map((item) => (
             <div className="admin-attachment" key={`${row.id || row.bundle_id}-${item.path || item.name}`}>
               <SubmissionAsset item={item} signedUrl={item.path ? signedUrls[item.path] : null} />
-              <div className="admin-attachment__meta">
-                <strong>{item.name || 'Attachment'}</strong>
-                <span>
-                  {item.kind || 'file'} / {item.type || 'unknown'} / {formatBytes(item.size)}
-                </span>
-              </div>
+              {item.kind !== 'audio' ? (
+                <div className="admin-attachment__meta">
+                  <strong>{item.name || 'Attachment'}</strong>
+                  <span>
+                    {item.kind || 'file'} / {item.type || 'unknown'} / {formatBytes(item.size)}
+                  </span>
+                </div>
+              ) : null}
             </div>
           ))
         ) : (

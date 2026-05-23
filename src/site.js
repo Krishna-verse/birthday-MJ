@@ -1090,6 +1090,8 @@ audioPlayer.preload = "auto";
 audioPlayer.volume = 0.85;
 let currentSong = 0;
 let isPlaying = false;
+let recordingAudioState = null;
+let suppressBackgroundResume = false;
 
 const songTitle = document.getElementById("songTitle");
 const songStatus = document.getElementById("songStatus");
@@ -1219,10 +1221,72 @@ audioPlayer.addEventListener("play", () => {
   pauseBackgroundMusicForPlayer();
 });
 audioPlayer.addEventListener("pause", () => {
+  if (suppressBackgroundResume) {
+    return;
+  }
+
   if (!isPlaying) {
     resumeBackgroundLoop();
   }
 });
+
+function pauseAudioForRecording() {
+  if (recordingAudioState) {
+    return;
+  }
+
+  recordingAudioState = {
+    bgmWasPlaying: Boolean(bgm && !bgm.paused),
+    bgLoopWasPlaying: Boolean(bgLoop && !bgLoop.paused),
+    audioPlayerWasPlaying: Boolean(audioPlayer && !audioPlayer.paused),
+  };
+
+  suppressBackgroundResume = true;
+  bgm?.pause();
+  bgLoop?.pause();
+  audioPlayer?.pause();
+  suppressBackgroundResume = false;
+
+  if (recordingAudioState.audioPlayerWasPlaying) {
+    isPlaying = false;
+    updateMusicUI();
+    stopMusicEmojiFloat();
+  }
+}
+
+function resumeAudioAfterRecording() {
+  if (!recordingAudioState) {
+    return;
+  }
+
+  const state = recordingAudioState;
+  recordingAudioState = null;
+
+  if (state.audioPlayerWasPlaying && audioPlayer) {
+    isPlaying = true;
+    pauseBackgroundMusicForPlayer();
+    audioPlayer.play().catch(() => {
+      isPlaying = false;
+      updateMusicUI();
+      resumeBackgroundLoop();
+    });
+    updateMusicUI();
+    startMusicEmojiFloat();
+    return;
+  }
+
+  if (state.bgmWasPlaying && bgm) {
+    bgm.play().catch(() => {});
+    return;
+  }
+
+  if (state.bgLoopWasPlaying) {
+    bgLoop.play().catch(() => {});
+  }
+}
+
+window.addEventListener("birthday:recording-audio-pause", pauseAudioForRecording);
+window.addEventListener("birthday:recording-audio-resume", resumeAudioAfterRecording);
 
 function playSong() {
   pauseBackgroundMusicForPlayer();
@@ -1511,6 +1575,8 @@ Object.assign(window, {
 return () => {
   overlay.removeEventListener("click", overlayClickHandler);
   window.removeEventListener("birthday:home-visible", handleHomeVisible);
+  window.removeEventListener("birthday:recording-audio-pause", pauseAudioForRecording);
+  window.removeEventListener("birthday:recording-audio-resume", resumeAudioAfterRecording);
   clearInterval(countdownIntervalId);
   if (confettiRainIntervalId) clearInterval(confettiRainIntervalId);
   stopHeartRain();

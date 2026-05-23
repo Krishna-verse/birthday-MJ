@@ -21,14 +21,14 @@ const tools = [
   },
   {
     id: 'camera',
-    label: 'Camera',
+    label: 'Record',
     title: 'Camera',
     description: 'Capture a photo or short clip.',
     icon: '📷',
   },
   {
     id: 'upload',
-    label: 'Upload',
+    label: 'Media',
     title: 'Attach files',
     description: 'Choose something from your device.',
     icon: '⬆',
@@ -116,6 +116,25 @@ const formatSeconds = (seconds) => {
   return `${minutes}:${String(remaining).padStart(2, '0')}`;
 };
 
+const photoFilters = [
+  { id: 'natural', label: 'Natural', filter: 'none' },
+  { id: 'soft', label: 'Soft', filter: 'brightness(1.08) contrast(0.94) saturate(1.12)' },
+  { id: 'glow', label: 'Glow', filter: 'brightness(1.12) contrast(1.05) saturate(1.22)' },
+  { id: 'mono', label: 'Mono', filter: 'grayscale(1) contrast(1.12) brightness(1.02)' },
+  { id: 'film', label: 'Film', filter: 'sepia(0.28) contrast(1.08) saturate(1.28)' },
+];
+
+const getPhotoFilter = (id) =>
+  photoFilters.find((filter) => filter.id === id) || photoFilters[0];
+
+const pauseBackgroundAudioForRecording = () => {
+  window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
+};
+
+const resumeBackgroundAudioAfterRecording = () => {
+  window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+};
+
 function createAttachment(file, kind) {
   return {
     id: uid(),
@@ -126,9 +145,74 @@ function createAttachment(file, kind) {
   };
 }
 
+function VoiceAttachmentPlayer({ src, name }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  const progress = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+
+  const togglePlayback = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audio.paused) {
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  };
+
+  const seek = (event) => {
+    const audio = audioRef.current;
+    const nextTime = Number(event.target.value);
+    if (!audio || !Number.isFinite(nextTime)) return;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  };
+
+  return (
+    <div className="thank-you-voice-player">
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="metadata"
+        onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
+        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime || 0)}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+      />
+      <button
+        type="button"
+        className={`thank-you-voice-player__play ${playing ? 'is-playing' : ''}`}
+        onClick={togglePlayback}
+        aria-label={playing ? `Pause ${name}` : `Play ${name}`}
+      >
+        {playing ? 'Pause' : 'Play'}
+      </button>
+      <div className="thank-you-voice-player__body">
+        <input
+          className="thank-you-voice-player__range"
+          type="range"
+          min="0"
+          max={duration || 0}
+          step="0.1"
+          value={Math.min(currentTime, duration || 0)}
+          onChange={seek}
+          style={{ '--voice-progress': `${progress}%` }}
+          aria-label={`Voice note timeline for ${name}`}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function ThankYouStudio({ open, onClose, userEmail }) {
   const [activeTool, setActiveTool] = useState('text');
   const [cameraMode, setCameraMode] = useState('photo');
+  const [photoFilterId, setPhotoFilterId] = useState('natural');
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [sendSuccess, setSendSuccess] = useState(null);
@@ -146,6 +230,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
   const chunksRef = useRef([]);
   const recordTimerRef = useRef(null);
   const attachmentsRef = useRef([]);
+  const selectedPhotoFilter = getPhotoFilter(photoFilterId);
 
   useEffect(() => {
     attachmentsRef.current = attachments;
@@ -286,7 +371,9 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
       return;
     }
 
+    context.filter = selectedPhotoFilter.filter;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    context.filter = 'none';
     canvas.toBlob(
       (blob) => {
         if (!blob) {
@@ -322,6 +409,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
       const mimeType = pickRecorderMime('audio');
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
 
+      pauseBackgroundAudioForRecording();
       chunksRef.current = [];
       recorderRef.current = recorder;
       setRecordingState('voice');
@@ -347,10 +435,11 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
         });
         const file = new File([blob], `voice-note-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
         addAttachment(file, 'audio');
-        setStatus('Voice note attached.');
+        setStatus('');
         stream.getTracks().forEach((track) => track.stop());
         recorderRef.current = null;
         chunksRef.current = [];
+        resumeBackgroundAudioAfterRecording();
       };
 
       recorder.start();
@@ -359,6 +448,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
       setRecordingState('idle');
       setCameraMessage('Voice recording could not start.');
       setError(err instanceof Error ? err.message : 'Could not start voice recording.');
+      resumeBackgroundAudioAfterRecording();
     }
   }
 
@@ -394,6 +484,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
       const mimeType = pickRecorderMime('video');
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
 
+      pauseBackgroundAudioForRecording();
       chunksRef.current = [];
       recorderRef.current = recorder;
       setRecordingState('video');
@@ -419,7 +510,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
         });
         const file = new File([blob], `video-clip-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
         addAttachment(file, 'video');
-        setStatus('Video clip attached.');
+        setStatus('');
         stream.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
         if (cameraRef.current) {
@@ -428,6 +519,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
         setCameraReady(false);
         recorderRef.current = null;
         chunksRef.current = [];
+        resumeBackgroundAudioAfterRecording();
       };
 
       recorder.start();
@@ -436,6 +528,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
       setRecordingState('idle');
       setCameraMessage('Video recording could not start.');
       setError(err instanceof Error ? err.message : 'Could not start video recording.');
+      resumeBackgroundAudioAfterRecording();
     }
   }
 
@@ -668,13 +761,22 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
           </div>
         ) : (
           <>
-        <div className="thank-you-modal__header">
-          <div>
-            <div className="thank-you-modal__badge">Thank You</div>
-            <h2>Leave a note, voice, photo, or video</h2>
-            <p>Write something sweet, record a voice note, or attach a moment you want to share.</p>
+        <div className="thank-you-modal__birthday-watermark" aria-hidden="true">
+          <div className="birthday-finale__panel">
+            <h2 className="birthday-finale__title">
+              <span>Happy</span>
+              <span>Birthday</span>
+            </h2>
+            <div className="birthday-finale__name-row">
+              <span className="birthday-finale__name">Samruddhi</span>
+              <span className="birthday-finale__cake">🎂</span>
+            </div>
+            <p>Wishing you all the magic this world holds ✨</p>
           </div>
-          <button className="thank-you-modal__close" type="button" onClick={onClose}>
+        </div>
+        <div className="thank-you-modal__header">
+          <h2>Leave a note, voice, and more for me.</h2>
+          <button className="thank-you-modal__close" type="button" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>
@@ -714,6 +816,25 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
               <div className="thank-you-compose__voice">
                 <label className="thank-you-label">Voice note</label>
                 <p className="thank-you-compose__voice-copy">{cameraMessage}</p>
+                {recordingState === 'voice' ? (
+                  <div className="thank-you-voice-orbit" aria-hidden="true">
+                    <span className="thank-you-voice-orbit__ring" />
+                    <span className="thank-you-voice-orbit__core">REC</span>
+                    {['♪', '♡', '✦', '♫', '•'].map((emoji, index) => (
+                      <span
+                        className="thank-you-voice-orbit__emoji"
+                        key={`${emoji}-${index}`}
+                        style={{
+                          '--emoji-index': index,
+                          '--emoji-angle': `${index * 72}deg`,
+                          '--emoji-angle-inverse': `${index * -72}deg`,
+                        }}
+                      >
+                        {emoji}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="thank-you-recorder">
                   <button
                     type="button"
@@ -757,8 +878,36 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
                   </button>
                 </div>
 
+                {cameraMode === 'photo' ? (
+                  <div className="thank-you-filter-strip" aria-label="Photo filters">
+                    {photoFilters.map((filter) => (
+                      <button
+                        key={filter.id}
+                        type="button"
+                        className={`thank-you-filter-chip ${photoFilterId === filter.id ? 'is-active' : ''}`}
+                        onClick={() => setPhotoFilterId(filter.id)}
+                        aria-pressed={photoFilterId === filter.id}
+                      >
+                        <span
+                          className="thank-you-filter-chip__swatch"
+                          style={{ '--photo-filter': filter.filter }}
+                          aria-hidden="true"
+                        />
+                        <span>{filter.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
                 <div className="thank-you-camera">
-                  <video ref={cameraRef} className="thank-you-camera__view" muted playsInline autoPlay />
+                  <video
+                    ref={cameraRef}
+                    className="thank-you-camera__view"
+                    muted
+                    playsInline
+                    autoPlay
+                    style={{ '--active-photo-filter': cameraMode === 'photo' ? selectedPhotoFilter.filter : 'none' }}
+                  />
                 </div>
 
                 <div className="thank-you-camera__actions">
@@ -781,9 +930,6 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
                   )}
                 </div>
 
-                <button type="button" className="thank-you-link-btn" onClick={stopCamera}>
-                  Close
-                </button>
               </div>
             ) : null}
 
@@ -794,6 +940,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
                 </label>
                 <p className="thank-you-compose__voice-copy">Choose files from your device.</p>
                 <label className="thank-you-dropzone" htmlFor="thank-you-upload">
+                  <span className="thank-you-dropzone__icon" aria-hidden="true">↑</span>
                   <span>Choose files</span>
                   <small>Images, videos, audio, or documents</small>
                 </label>
@@ -826,15 +973,17 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
                     ) : item.kind === 'video' ? (
                       <video src={item.previewUrl} className="thank-you-attachment__preview" controls playsInline />
                     ) : item.kind === 'audio' ? (
-                      <audio src={item.previewUrl} className="thank-you-attachment__audio" controls />
+                      <VoiceAttachmentPlayer src={item.previewUrl} name={item.name} />
                     ) : (
                       <div className="thank-you-attachment__file">File</div>
                     )}
 
-                    <div className="thank-you-attachment__meta">
-                      <span>{item.kind}</span>
-                      <strong>{item.name}</strong>
-                    </div>
+                    {item.kind !== 'audio' ? (
+                      <div className="thank-you-attachment__meta">
+                        <span>{item.kind}</span>
+                        <strong>{item.name}</strong>
+                      </div>
+                    ) : null}
                   </article>
                 ))
               ) : null}
@@ -849,6 +998,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
         ) : null}
 
         <div className="thank-you-modal__footer">
+          <p className="thank-you-modal__privacy">This didn&apos;t get public.</p>
           <button type="button" className="thank-you-submit-btn" onClick={handleSend} disabled={uploading || !open}>
             {uploading ? 'Sending...' : 'Send it...'}
           </button>

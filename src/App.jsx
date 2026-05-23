@@ -86,6 +86,31 @@ function PrivatePicCanvas({ pic, direction, label }) {
     };
   }, [pic?.url]);
 
+  useEffect(() => {
+    const preventPrivateImageCapture = (event) => {
+      event.preventDefault();
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'PrintScreen') {
+        event.preventDefault();
+      }
+    };
+
+    const canvas = canvasRef.current;
+    canvas?.addEventListener('contextmenu', preventPrivateImageCapture);
+    canvas?.addEventListener('dragstart', preventPrivateImageCapture);
+    canvas?.addEventListener('selectstart', preventPrivateImageCapture);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      canvas?.removeEventListener('contextmenu', preventPrivateImageCapture);
+      canvas?.removeEventListener('dragstart', preventPrivateImageCapture);
+      canvas?.removeEventListener('selectstart', preventPrivateImageCapture);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <canvas
       ref={canvasRef}
@@ -626,23 +651,6 @@ function BirthdayExperience({
     const sound = new Audio('/Faah.mpeg');
     sound.volume = 1;
     sound.play().catch(() => {});
-  };
-
-  const movePrivatePic = (step) => {
-    if (!privatePics.length) {
-      return;
-    }
-
-    const nextDirection = getRandomPicSlideDirection();
-    setPrivatePicsDirection(nextDirection);
-    setPrivatePicsIndex((index) => {
-      setPrivatePicsPrevious({
-        direction: nextDirection,
-        index,
-        pic: privatePics[index],
-      });
-      return (index + step + privatePics.length) % privatePics.length;
-    });
   };
 
   useEffect(() => {
@@ -1279,29 +1287,6 @@ function BirthdayExperience({
                     label={`Private memory ${privatePicsIndex + 1}`}
                   />
                 </div>
-                {privatePics.length > 1 ? (
-                  <div className="pics-controls" aria-label="Photo slideshow controls">
-                    <button
-                      type="button"
-                      className="pics-control"
-                      aria-label="Previous photo"
-                      onClick={() => movePrivatePic(-1)}
-                    >
-                      ‹
-                    </button>
-                    <span className="pics-count">
-                      {privatePicsIndex + 1} / {privatePics.length}
-                    </span>
-                    <button
-                      type="button"
-                      className="pics-control"
-                      aria-label="Next photo"
-                      onClick={() => movePrivatePic(1)}
-                    >
-                      ›
-                    </button>
-                  </div>
-                ) : null}
               </>
             ) : (
               <div className="pics-state">{privatePicsError || 'No photos found yet.'}</div>
