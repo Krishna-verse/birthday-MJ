@@ -1075,10 +1075,10 @@ const songs = [
     title: "Runaway",
     url: "/Runawaympeg"
   },
-  // {
-  //   title: "Song 4",
-  //   url: "4.mp3"
-  // },
+  {
+    title: "Main khoo gya",
+    url: "/Main khoo gya.mpeg"
+  },
   // {
   //   title: "Song 5",
   //   url: "5.mp3"
