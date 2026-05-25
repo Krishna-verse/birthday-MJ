@@ -1352,7 +1352,7 @@ function updateMusicUI() {
   
   if (playlistCount) playlistCount.textContent = `${currentSong + 1} / ${songs.length}`;
   if (playBtn) {
-    playBtn.textContent = isPlaying ? "\u{23F8}" : "\u{25B6}";
+    playBtn.innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
     playBtn.setAttribute("aria-label", isPlaying ? "Pause song" : "Play song");
   }
   if (songStatus) songStatus.textContent = isPlaying ? "Now Playing" : "Paused";

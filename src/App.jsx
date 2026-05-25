@@ -38,6 +38,7 @@ function PrivatePicCanvas({ pic, direction, label }) {
 
     const canvas = canvasRef.current;
     const image = new Image();
+    image.crossOrigin = 'anonymous';
     let ignore = false;
 
     const drawImage = () => {
@@ -644,7 +645,7 @@ function MemoryVoicePlayer({ src, onPlay, onPause, onEnded }) {
         className="memory-voice-btn" 
         onClick={() => audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause()}
       >
-        {isPlaying ? '⏸' : '▶'}
+        {isPlaying ? <i className="fa-solid fa-pause"></i> : <i className="fa-solid fa-play"></i>}
       </button>
       <div className="memory-voice-info">
         <input 
@@ -670,18 +671,21 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoUrl, setVideoUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); 
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setLoadError(false);
+
     const getSecureUrl = async () => {
       if (!src) { setLoading(false); return; }
       try {
         let finalUrl;
-        // If the src is just a filename, fetch from the private Supabase bucket
         if (!src.startsWith('http') && !src.startsWith('/')) {
-          // Use Signed URL for large files to allow streaming and avoid fetch errors
           const { data, error } = await supabase.storage.from('private_vid').createSignedUrl(src, 3600);
           if (error) throw error;
           finalUrl = data.signedUrl;
@@ -691,12 +695,12 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
 
         if (active) {
           setVideoUrl(finalUrl);
-          setLoading(false);
+          // We keep loading=true here; the video element's onCanPlay will flip it to false.
         }
       } catch (err) {
         console.error("Video loading failed", err);
-        // Fallback to direct src if blob fails, or show error
         if (active) {
+          setLoadError(true);
           setLoading(false);
         }
       }
@@ -730,27 +734,48 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
     }
   };
 
+  const showLoader = loading || isBuffering;
+
   return (
     <div className="memory-video-custom">
-      {loading ? (
-        <div className="video-loader">Loading...</div>
-      ) : (
+      {(showLoader || !videoUrl) && !loadError && (
+        <div className="video-loader">
+          <i className="fa-solid fa-circle-notch fa-spin"></i>
+          <span>{loading ? "Fetching Secure Link..." : "Buffering Video..."}</span>
+        </div>
+      )}
+
+      {loadError && (
+        <div className="video-loader video-loader--error">
+          <div className="video-loader__content">
+            <i className="fa-solid fa-triangle-exclamation"></i>
+            <span>Video Unavailable</span>
+          </div>
+        </div>
+      )}
+
+      {videoUrl && (
         <>
           <video
             ref={videoRef}
             src={videoUrl}
             playsInline
+            autoPlay
+            preload="auto"
+            onCanPlay={() => { setLoading(false); setIsBuffering(false); }}
+            onWaiting={() => setIsBuffering(true)}
+            onPlaying={() => { setIsBuffering(false); setLoading(false); }}
             onPlay={() => { setIsPlaying(true); onPlay(); }}
             onPause={() => { setIsPlaying(false); onPause(); }}
             onEnded={() => { setIsPlaying(false); onEnded(); }}
-            className="memory-video-element"
+            className={`memory-video-element ${showLoader ? 'is-loading' : ''}`}
             onClick={togglePlay}
             onContextMenu={(e) => e.preventDefault()}
           />
           
-          <div className="video-custom-controls">
+          <div className={`video-custom-controls ${showLoader ? 'is-dimmed' : ''}`}>
             <button type="button" className="video-play-pause-btn" onClick={togglePlay}>
-              {isPlaying ? '⏸' : '▶'}
+              {isPlaying ? <i className="fa-solid fa-pause"></i> : <i className="fa-solid fa-play"></i>}
             </button>
             
             <div className="video-controls-right">
@@ -798,6 +823,7 @@ function BirthdayExperience({
   const [clockNow, setClockNow] = useState(() => Date.now());
   const [introCakeKey, setIntroCakeKey] = useState(0);
   const [privatePics, setPrivatePics] = useState([]);
+  const [fullscreenVid, setFullscreenVid] = useState(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(null);
   const [memoryIndex, setMemoryIndex] = useState(0);
   const [privatePicsIndex, setPrivatePicsIndex] = useState(0);
@@ -984,61 +1010,25 @@ function BirthdayExperience({
         return;
       }
 
-      const objectUrls = [];
-      const nextPics = (await Promise.all(
-        (signedFiles || []).map(async (item, index) => {
-          if (!item.signedUrl) {
-            return null;
-          }
-
-          try {
-            const response = await fetch(item.signedUrl, { cache: 'no-store' });
-            if (!response.ok) {
-              return null;
-            }
-
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            objectUrls.push(objectUrl);
-
-            return {
-              path: imagePaths[index],
-              url: objectUrl,
-            };
-          } catch {
-            return null;
-          }
+      const nextPics = (signedFiles || [])
+        .map((item, index) => {
+          if (!item.signedUrl) return null;
+          return {
+            path: imagePaths[index],
+            url: item.signedUrl,
+          };
         })
-      )).filter(Boolean);
+        .filter(Boolean);
 
-      if (ignore) {
-        objectUrls.forEach((url) => URL.revokeObjectURL(url));
-        return undefined;
-      }
+      if (ignore) return;
 
       setPrivatePics(nextPics);
       setPrivatePicsIndex(0);
       setPrivatePicsLoading(false);
-
-      return () => {
-        objectUrls.forEach((url) => URL.revokeObjectURL(url));
-      };
     };
-
-    let revokeLoadedPics = () => {};
-    loadPrivatePics().then((cleanup) => {
-      if (typeof cleanup === 'function') {
-        if (ignore) {
-          cleanup();
-        } else {
-          revokeLoadedPics = cleanup;
-        }
-      }
-    });
 
     return () => {
       ignore = true;
-      revokeLoadedPics();
     };
   }, []);
 
@@ -1233,6 +1223,7 @@ function BirthdayExperience({
             <img className="home-shell__bow" src="/samruddhi-bow.avif" alt="" aria-hidden="true" />
           </div>
         </div>
+
         <section className={`cards-stage ${cardsVisible ? 'is-visible' : ''}`}>
           <div className="cards-thread" aria-hidden="true">
             <span className="cards-thread__spine" />
@@ -1337,7 +1328,7 @@ function BirthdayExperience({
         <div ref={thankYouRevealRef} className="thank-you-fab-sentinel" aria-hidden="true" />
       </main>
 
-      <div id="popupLayer" className="popup-layer" aria-hidden="true">
+      <div id="popupLayer" className="popup-layer">
         <div id="partyPopup" className="popup-box wide-popup">
           <span className="popup-close" onClick={() => window.closeParty?.()}>&times;</span>
           <div className="video-wrapper">
@@ -1473,7 +1464,24 @@ function BirthdayExperience({
         <div id="memoriesPopup" className="popup-box memories-popup">
           <span className="popup-close" onClick={closeMemoriesAndReset}>&times;</span>
           <h2>🖤 Our Memories</h2>
-          <p className="memories-subtitle">A timeline of the moments we keep forever.</p>
+          
+          <div className="memory-progress-header">
+            <div className="memory-progress-track">
+              <div 
+                className="memory-progress-fill" 
+                style={{ width: `${(memoryIndex / (memoryData.length - 1)) * 100}%` }}
+              />
+              {memoryData.map((_, idx) => (
+                <div 
+                  key={idx} 
+                  className={`memory-progress-step ${idx <= memoryIndex ? 'is-active' : ''} ${idx < memoryIndex ? 'is-complete' : ''}`}
+                  onClick={() => { setMemoryIndex(idx); setActiveMediaIndex(null); }}
+                >
+                  <span>#{idx + 1}</span>
+                </div>
+              ))}
+            </div>
+          </div>
           
           <div className="memory-slider">
             {memoryData.map((memory, idx) => (
@@ -1509,21 +1517,17 @@ function BirthdayExperience({
                         />
                       )}
                       {idx === memoryIndex && memory.type === 'video' && (
-                        <MemoryVideoPlayer 
-                          src={memory.src}
-                          onPlay={() => {
-                            setActiveMediaIndex(idx);
-                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
-                          }}
-                          onPause={() => {
-                            setActiveMediaIndex(null);
-                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
-                          }}
-                          onEnded={() => {
-                            setActiveMediaIndex(null);
-                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
-                          }}
-                        />
+                        <div className="memory-video-launcher">
+                          <button 
+                            className="special-see-btn" 
+                            onClick={() => {
+                              setFullscreenVid(memory);
+                              window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
+                            }}
+                          >
+                            <i className="fa-solid fa-play"></i> Watch Memory
+                          </button>
+                        </div>
                       )}
                       {memory.type === 'image' && (
                         <img src={memory.src} alt="" className="memory-card__img" onError={(e) => e.target.style.display = 'none'} />
@@ -1624,6 +1628,39 @@ function BirthdayExperience({
       ) : null}
 
       <ThankYouStudio open={thankYouOpen} onClose={() => setThankYouOpen(false)} userEmail={userEmail} />
+
+      {fullscreenVid && (
+        <div className="fullscreen-video-modal" onClick={() => {
+          setFullscreenVid(null);
+          window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+        }}>
+          <div className="fullscreen-video-panel" onClick={e => e.stopPropagation()}>
+            <button 
+              className="fullscreen-video-close" 
+              onClick={() => {
+                setFullscreenVid(null);
+                window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+              }}
+            >
+              &times;
+            </button>
+            <div className="fullscreen-video-body">
+              <MemoryVideoPlayer 
+                src={fullscreenVid.src}
+                onPlay={() => {
+                  window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
+                }}
+                onPause={() => {
+                  window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+                }}
+                onEnded={() => {
+                  window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
