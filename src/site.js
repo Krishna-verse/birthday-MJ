@@ -451,6 +451,7 @@ const overlayClickHandler = () => {
   aboutText.classList.add("typing-cursor");
   aboutPopup.classList.remove("blur-active");
   wishPopup.classList.remove("blur-active");
+  rizzPopup.classList.remove("blur-active");
 
   // Stop music popup audio if needed
   if (isMusicOpen) {
@@ -940,6 +941,10 @@ let lastRizzIndex = -1;
 rizzCard.onclick = function () {
   openPopup(rizzPopup);
   startHeartRain();
+  setTimeout(() => {
+    rizzPopup.classList.add("blur-active");
+    startFloatingEffects("rizzImageWrap");
+  }, 400);
 };
 
 function closeRizz() {
@@ -947,6 +952,8 @@ function closeRizz() {
   stopHeartRain();
   setTimeout(() => {
     rizzOutput.innerHTML = "";
+    rizzPopup.classList.remove("blur-active");
+    if (floatingInterval) clearInterval(floatingInterval);
   }, 300);
 }
 

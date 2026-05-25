@@ -621,19 +621,36 @@ function MemoryVoicePlayer({ src, onPlay, onPause, onEnded }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  useEffect(() => {
+    return () => {
+      // Ensure background music resumes if this component unmounts while playing
+      window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+    };
+  }, []);
+
   const formatTime = (time) => {
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
+    const mins = Math.floor(time / 60) || 0;
+    const secs = Math.floor(time % 60) || 0;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (audioRef.current.paused) {
+      audioRef.current.play().catch(() => {});
+    } else {
+      audioRef.current.pause();
+    }
+  };
 
   return (
     <div className="memory-voice-player">
       <audio
         ref={audioRef}
         src={src}
+        preload="metadata"
         onPlay={() => { setIsPlaying(true); onPlay(); }}
         onPause={() => { setIsPlaying(false); onPause(); }}
         onEnded={() => { setIsPlaying(false); onEnded(); }}
@@ -643,7 +660,7 @@ function MemoryVoicePlayer({ src, onPlay, onPause, onEnded }) {
       <button 
         type="button" 
         className="memory-voice-btn" 
-        onClick={() => audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause()}
+        onClick={togglePlay}
       >
         {isPlaying ? <i className="fa-solid fa-pause"></i> : <i className="fa-solid fa-play"></i>}
       </button>
@@ -671,7 +688,7 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoUrl, setVideoUrl] = useState(null);
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -695,7 +712,7 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
 
         if (active) {
           setVideoUrl(finalUrl);
-          // We keep loading=true here; the video element's onCanPlay will flip it to false.
+          // We keep loading true until the video actually can play
         }
       } catch (err) {
         console.error("Video loading failed", err);
@@ -708,6 +725,8 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
     getSecureUrl();
     return () => {
       active = false;
+      // Ensure background music resumes when the player is closed/unmounted
+      window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
     };
   }, [src]);
 
@@ -727,21 +746,22 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
   };
 
   const togglePlay = () => {
+    if (!videoRef.current) return;
     if (videoRef.current.paused) {
-      videoRef.current.play();
+      videoRef.current.play().catch(e => console.warn("Video playback blocked:", e));
     } else {
       videoRef.current.pause();
     }
   };
 
-  const showLoader = loading || isBuffering;
+  const showLoader = (loading || isBuffering) && !loadError;
 
   return (
-    <div className="memory-video-custom">
-      {(showLoader || !videoUrl) && !loadError && (
+    <div className={`memory-video-custom ${isPlaying ? 'is-playing' : ''}`}>
+      {showLoader && (
         <div className="video-loader">
           <i className="fa-solid fa-circle-notch fa-spin"></i>
-          <span>{loading ? "Fetching Secure Link..." : "Buffering Video..."}</span>
+          <span>{loading ? "Wait MJ" : "Buffering..."}</span>
         </div>
       )}
 
@@ -762,18 +782,19 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
             playsInline
             autoPlay
             preload="auto"
-            onCanPlay={() => { setLoading(false); setIsBuffering(false); }}
+            muted={false}
+            onCanPlay={() => { setLoading(false); }}
             onWaiting={() => setIsBuffering(true)}
-            onPlaying={() => { setIsBuffering(false); setLoading(false); }}
+            onPlaying={() => { setIsBuffering(false); setLoading(false); setIsPlaying(true); }}
             onPlay={() => { setIsPlaying(true); onPlay(); }}
             onPause={() => { setIsPlaying(false); onPause(); }}
             onEnded={() => { setIsPlaying(false); onEnded(); }}
-            className={`memory-video-element ${showLoader ? 'is-loading' : ''}`}
+            className={`memory-video-element ${showLoader ? 'is-loading' : ''} is-visible`}
             onClick={togglePlay}
             onContextMenu={(e) => e.preventDefault()}
           />
           
-          <div className={`video-custom-controls ${showLoader ? 'is-dimmed' : ''}`}>
+          <div className={`video-custom-controls ${showLoader ? 'is-hidden' : ''}`}>
             <button type="button" className="video-play-pause-btn" onClick={togglePlay}>
               {isPlaying ? <i className="fa-solid fa-pause"></i> : <i className="fa-solid fa-play"></i>}
             </button>
@@ -852,7 +873,7 @@ function BirthdayExperience({
   };
 
   useEffect(() => {
-    if (thankYouOpen) {
+    if (thankYouOpen || !!fullscreenVid) {
       lockBodyScroll();
     } else {
       unlockBodyScroll();
@@ -861,7 +882,7 @@ function BirthdayExperience({
     return () => {
       unlockBodyScroll();
     };
-  }, [thankYouOpen]);
+  }, [thankYouOpen, fullscreenVid]);
 
   const moveNotInterestedButton = (event) => {
     const touchPoint = event.touches?.[0] || event.changedTouches?.[0];
@@ -999,7 +1020,7 @@ function BirthdayExperience({
 
       const { data: signedFiles, error: signedError } = await supabase.storage
         .from(PRIVATE_IMAGES_BUCKET)
-        .createSignedUrls(imagePaths, 120);
+        .createSignedUrls(imagePaths, 3600);
 
       if (ignore) return;
 
@@ -1026,6 +1047,8 @@ function BirthdayExperience({
       setPrivatePicsIndex(0);
       setPrivatePicsLoading(false);
     };
+
+    loadPrivatePics();
 
     return () => {
       ignore = true;
@@ -1361,12 +1384,17 @@ function BirthdayExperience({
 
         <div id="rizzPopup" className="popup-box rizz-popup">
           <span className="popup-close" onClick={() => window.closeRizz?.()}>&times;</span>
-          <h2>😏 Rizz for You</h2>
-          <p className="rizz-subtitle">Tap below and get a smooth line ✨</p>
-          <button id="generateRizzBtn" className="primary-btn">
-            ✨ Get rizz
-          </button>
-          <div id="rizzOutput" />
+          <div className="rizz-image-wrap" id="rizzImageWrap">
+            <div className="rizz-image-overlay" />
+          </div>
+          <div className="rizz-content">
+            <h2>😏 Rizz for You</h2>
+            <p className="rizz-subtitle">Tap below and get a smooth line ✨</p>
+            <button id="generateRizzBtn" className="primary-btn">
+              ✨ Get rizz
+            </button>
+            <div id="rizzOutput" />
+          </div>
           <div id="heartBurstContainer" />
         </div>
 
@@ -1630,32 +1658,20 @@ function BirthdayExperience({
       <ThankYouStudio open={thankYouOpen} onClose={() => setThankYouOpen(false)} userEmail={userEmail} />
 
       {fullscreenVid && (
-        <div className="fullscreen-video-modal" onClick={() => {
-          setFullscreenVid(null);
-          window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
-        }}>
+        <div className="fullscreen-video-modal" onClick={() => setFullscreenVid(null)}>
           <div className="fullscreen-video-panel" onClick={e => e.stopPropagation()}>
             <button 
               className="fullscreen-video-close" 
-              onClick={() => {
-                setFullscreenVid(null);
-                window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
-              }}
+              onClick={() => setFullscreenVid(null)}
             >
               &times;
             </button>
             <div className="fullscreen-video-body">
               <MemoryVideoPlayer 
                 src={fullscreenVid.src}
-                onPlay={() => {
-                  window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
-                }}
-                onPause={() => {
-                  window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
-                }}
-                onEnded={() => {
-                  window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
-                }}
+                onPlay={() => window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'))}
+                onPause={() => window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'))}
+                onEnded={() => window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'))}
               />
             </div>
           </div>
