@@ -1,4 +1,4 @@
-﻿﻿﻿﻿import { useEffect, useRef, useState } from 'react';
+﻿﻿﻿﻿﻿﻿import { useEffect, useRef, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { initBirthdaySite } from './site';
 import AdminDashboard from './AdminDashboard';
@@ -200,6 +200,33 @@ const cards = [
   { id: 'memoriesCard', title: 'Our Memories', text: 'Little moments we keep forever', icon: '\u{1F5A4}' },
   { id: 'picsCard', title: 'Your Pics', text: 'A tiny photo corner for you', icon: '\u{1F5BC}\u{FE0F}' },
   { id: 'rizzCard', title: 'Rizz for You', text: 'Smooth lines only', icon: '\u{1F60F}' }
+];
+
+const memoryData = [
+  {
+    title: "First Birthday Wish (😉)",
+    description: "Voice note",
+    type: "audio",
+    src: "/On my way.aac" // Add your voice note file path here
+  },
+  {
+    title: "First Propose (❤️🩶)",
+    description: "You proposed a boy studying in class 12th on 30th April 2026 @2:51",
+    type: "image",
+    src: "" // Add a screenshot or photo path here
+  },
+  {
+    title: "First Voice Note (🫠)",
+    description: "Voice note of saying 3 magic words on 9th May 2026 @22:56",
+    type: "audio",
+    src: "" // Add your voice note file path here
+  },
+  {
+    title: "First Face Pic (😍)",
+    description: "Show beautiful face 👀 on 25th April 2026 @10:28",
+    type: "image",
+    src: "" // Add your beautiful face pic path here
+  }
 ];
 
 const flowerAsset = '/mj_pic2.png';
@@ -587,6 +614,58 @@ function AuthScreen({
   );
 }
 
+function MemoryVoicePlayer({ src, onPlay, onPause, onEnded }) {
+  const audioRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const formatTime = (time) => {
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="memory-voice-player">
+      <audio
+        ref={audioRef}
+        src={src}
+        onPlay={() => { setIsPlaying(true); onPlay(); }}
+        onPause={() => { setIsPlaying(false); onPause(); }}
+        onEnded={() => { setIsPlaying(false); onEnded(); }}
+        onTimeUpdate={() => setCurrentTime(audioRef.current.currentTime)}
+        onLoadedMetadata={() => setDuration(audioRef.current.duration)}
+      />
+      <button 
+        type="button" 
+        className="memory-voice-btn" 
+        onClick={() => audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause()}
+      >
+        {isPlaying ? '⏸' : '▶'}
+      </button>
+      <div className="memory-voice-info">
+        <input 
+          type="range" 
+          className="memory-voice-slider"
+          min="0" 
+          max={duration || 0} 
+          step="0.01"
+          value={currentTime} 
+          onChange={(e) => audioRef.current.currentTime = Number(e.target.value)}
+          style={{ '--progress': `${progress}%` }}
+        />
+        <div className="memory-voice-time">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BirthdayExperience({
   onSignOut,
   onOpenAdminPage,
@@ -602,6 +681,8 @@ function BirthdayExperience({
   const [clockNow, setClockNow] = useState(() => Date.now());
   const [introCakeKey, setIntroCakeKey] = useState(0);
   const [privatePics, setPrivatePics] = useState([]);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(null);
+  const [memoryIndex, setMemoryIndex] = useState(0);
   const [privatePicsIndex, setPrivatePicsIndex] = useState(0);
   const [privatePicsDirection, setPrivatePicsDirection] = useState('right');
   const [privatePicsPrevious, setPrivatePicsPrevious] = useState(null);
@@ -613,6 +694,15 @@ function BirthdayExperience({
   const [thankYouFabVisible, setThankYouFabVisible] = useState(false);
   const aboutPrivateImage = privatePics.find((pic) => isAboutPrivateImage(pic.path));
   const aboutBackgroundImage = aboutPrivateImage?.url || '/sam_pic.jpeg';
+
+  const closeMemoriesAndReset = () => {
+    window.closeMemories?.();
+    setMemoryIndex(0);
+    if (activeMediaIndex !== null) {
+      window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+    }
+    setActiveMediaIndex(null);
+  };
 
   const openThankYouStudio = () => {
     setThankYouOpen(true);
@@ -1264,31 +1354,102 @@ function BirthdayExperience({
         </div>
 
         <div id="memoriesPopup" className="popup-box memories-popup">
-          <span className="popup-close" onClick={() => window.closeMemories?.()}>&times;</span>
+          <span className="popup-close" onClick={closeMemoriesAndReset}>&times;</span>
           <h2>🖤 Our Memories</h2>
-          <p className="memories-subtitle">A small timeline of the moments that matter most.</p>
-          <div className="memory-list">
-            <div className="memory-item">
-              <span className="memory-item__dot" />
-              <div>
-                <h3>First vibe check</h3>
-                <p>That first moment when everything started feeling special.</p>
+          <p className="memories-subtitle">A timeline of the moments we keep forever.</p>
+          
+          <div className="memory-slider">
+            {memoryData.map((memory, idx) => (
+              <div 
+                key={idx} 
+                className={`memory-slide ${idx === memoryIndex ? 'is-active' : ''}`}
+                style={{ display: idx === memoryIndex ? 'block' : 'none' }}
+              >
+                <div className={`memory-card ${activeMediaIndex === idx ? 'is-playing' : ''}`}>
+                  <div className="memory-card__header">
+                    <span className="memory-card__badge">Memory #{idx + 1}</span>
+                    <h3>{memory.title}</h3>
+                  </div>
+
+                  <div className="memory-card__body">
+                    <p>{memory.description}</p>
+                    <div className="memory-card__media-wrap">
+                      {idx === memoryIndex && memory.type === 'audio' && (
+                        <MemoryVoicePlayer 
+                          src={memory.src}
+                          onPlay={() => {
+                            setActiveMediaIndex(idx);
+                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
+                          }}
+                          onPause={() => {
+                            setActiveMediaIndex(null);
+                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+                          }}
+                          onEnded={() => {
+                            setActiveMediaIndex(null);
+                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+                          }}
+                        />
+                      )}
+                      {idx === memoryIndex && memory.type === 'video' && (
+                        <video 
+                          controls 
+                          className="memory-card__video"
+                          onPlay={() => {
+                            setActiveMediaIndex(idx);
+                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
+                          }}
+                          onPause={() => {
+                            setActiveMediaIndex(null);
+                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+                          }}
+                          onEnded={() => {
+                            setActiveMediaIndex(null);
+                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+                          }}
+                        >
+                          <source src={memory.src} type="video/mp4" />
+                        </video>
+                      )}
+                      {memory.type === 'image' && (
+                        <img src={memory.src} alt="" className="memory-card__img" onError={(e) => e.target.style.display = 'none'} />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="memory-card__nav">
+                    {memoryIndex > 0 && (
+                      <button 
+                        className="memory-nav-btn" 
+                        onClick={() => {
+                          if (activeMediaIndex !== null) {
+                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+                          }
+                          setMemoryIndex(v => v - 1);
+                          setActiveMediaIndex(null);
+                        }}
+                      >
+                        <span>←</span>
+                      </button>
+                    )}
+                    {memoryIndex < memoryData.length - 1 && (
+                      <button 
+                        className="memory-nav-btn memory-nav-btn--next" 
+                        onClick={() => {
+                          if (activeMediaIndex !== null) {
+                            window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+                          }
+                          setMemoryIndex(v => v + 1);
+                          setActiveMediaIndex(null);
+                        }}
+                      >
+                        <span>→</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="memory-item">
-              <span className="memory-item__dot" />
-              <div>
-                <h3>Countless laughs</h3>
-                <p>Inside jokes, late replies, and all the random fun in between.</p>
-              </div>
-            </div>
-            <div className="memory-item">
-              <span className="memory-item__dot" />
-              <div>
-                <h3>Birthday forever</h3>
-                <p>This page keeps the memories alive in one clean little space.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 

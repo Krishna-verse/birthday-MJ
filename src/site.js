@@ -453,11 +453,16 @@ const overlayClickHandler = () => {
   wishPopup.classList.remove("blur-active");
 
   // Stop music popup audio if needed
-  if (audioPlayer && isPlaying) {
+  if (isMusicOpen) {
     audioPlayer.pause();
     isPlaying = false;
     updateMusicUI();
+    stopIntroMusic();
     stopMusicEmojiFloat();
+    resumeBackgroundLoop();
+  }
+
+  if (isMemoriesOpen) {
     resumeBackgroundLoop();
   }
 };
@@ -475,10 +480,13 @@ wishCard.onclick = () => {
   }, 400);
 };
 musicCard.onclick = () => {
-  stopIntroMusic();
+  pauseBackgroundMusicForPlayer();
   openPopup(musicPopup);
 };
-memoriesCard.onclick = () => openPopup(memoriesPopup);
+memoriesCard.onclick = () => {
+  pauseBackgroundMusicForPlayer();
+  openPopup(memoriesPopup);
+};
 picsCard.onclick = () => openPopup(picsPopup);
 if (shareCard) shareCard.onclick = () => openPopup(sharePopup);
 if (gameCard) {
@@ -499,7 +507,10 @@ function closeWish() {
   }, 300);
 }
 function closeShare() { closePopup(sharePopup); }
-function closeMemories() { closePopup(memoriesPopup); }
+function closeMemories() { 
+  closePopup(memoriesPopup); 
+  resumeBackgroundLoop();
+}
 function closePics() { closePopup(picsPopup); }
 
 function closeParty() {
@@ -1076,9 +1087,9 @@ function closeMusic() {
 ========================= */
 const songs = [
   {
-    title: "Aurora",
-    artist: "Runn",
-    url: "/Aurora.mpeg",
+    title: "Arcade",
+    artist: "",
+    url: "/Arcade.mpeg",
     image: "/first_music_img.jpeg",
     glow: {
       primary: "144, 144, 144",
@@ -1113,8 +1124,8 @@ const songs = [
   },
   {
     title: "Runaway",
-    artist: "Aurora",
-    url: "/Runawaympeg",
+    artist: "",
+    url: "/Runaway.mpeg",
     image: "/fouth_music_img.jpeg",
     glow: {
       primary: "255, 207, 64",
@@ -1133,6 +1144,114 @@ const songs = [
       secondary: "230, 255, 230",
       highlight: "255, 255, 255",
       core: "158, 226, 160",
+    },
+  },
+  {
+    title:'let me love you',
+    artist:'',
+    url : '/let me love you.aac',
+    image : '/sixth_music_img.jpeg',
+    glow: {
+      primary: "128, 128, 128",
+      secondary: "0, 0, 0",
+      highlight: "255, 255, 255",
+      core: "160, 160, 160",
+    },
+  },
+  {
+    title:"i don't know what to do",
+    artist:'',
+    url : '/I dont know what to do.aac',
+    image : '/seventh_music_img.jpeg',
+    glow: {
+      primary: "255, 0, 0",
+      secondary: "255, 255, 0",
+      highlight: "255, 255, 255",
+      core: "0, 255, 0",
+    },
+  },
+  {
+    title:"Middle of the  night",
+    artist:'',
+    url : '/Middle of the night.aac',
+    image : '/eight_music_img.jpeg',
+    glow: {
+      primary: "255, 105, 180",
+      secondary: "0, 0, 255",
+      highlight: "255, 255, 255",
+      core: "40, 40, 40",
+    },
+  },
+  {
+    title:'Night we met',
+    artist:'',
+    url : '/Night we met.aac',
+    image : '/ninth_music_img.jpeg',
+    glow: {
+      primary: "255, 105, 180",
+      secondary: "0, 0, 0",
+      highlight: "255, 255, 255",
+      core: "255, 0, 0",
+    },
+  },
+  {
+    title:'On my way',
+    artist:'',
+    url : '/On my way.aac',
+    image : '/tenth_music_img.jpeg',
+    glow: {
+      primary: "255, 255, 255",
+      secondary: "0, 0, 0",
+      highlight: "200, 200, 200",
+      core: "128, 128, 128",
+    },
+  },
+  {
+    title:'Sugar and brownies',
+    artist:'',
+    url : '/Sugar and brownies.aac',
+    image : '/eleventh_music_img.jpeg',
+    glow: {
+      primary: "128, 128, 128",
+      secondary: "0, 0, 0",
+      highlight: "255, 255, 255",
+      core: "255, 255, 0",
+    },
+  },
+  {
+    title:'Her',
+    artist:'',
+    url : '/Her.aac',
+    image : '/twelveth_music_img.jpeg',
+    glow: {
+      primary: "255, 255, 255",
+      secondary: "0, 0, 0",
+      highlight: "255, 255, 255",
+      core: "30, 30, 30",
+    },
+  },
+  {
+    title:'Dark side',
+    artist:'',
+    url : '/Dark side.aac',
+    image : '/thirteen_music_img.jpeg',
+    glow: {
+      primary: "255, 255, 255",
+      secondary: "0, 0, 0",
+      highlight: "255, 255, 255",
+      core: "30, 30, 30",
+    },
+  },
+  {
+    title:'Dhyan rakha kar',
+    artist:'',
+    url : '/Dhyan rakha kar.aac',
+    image : '/fourteen_music_img.jpeg',
+    glow: {
+      primary: "0, 0, 255",
+      secondary: "255, 255, 0",
+      highlight: "255, 255, 255",
+      core: "255, 0, 0",
     },
   },
 ];
