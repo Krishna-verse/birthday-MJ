@@ -1087,9 +1087,9 @@ function closeMusic() {
 ========================= */
 const songs = [
   {
-    title: "Arcade",
+    title: "Arcades",
     artist: "",
-    url: "/Arcade.mpeg",
+    url: "/Arcades.aac",
     image: "/first_music_img.jpeg",
     glow: {
       primary: "144, 144, 144",

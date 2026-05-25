@@ -204,28 +204,28 @@ const cards = [
 
 const memoryData = [
   {
-    title: "First Birthday Wish (😉)",
+    title: "First Birthday Wish 😉",
     description: "Voice note",
     type: "audio",
     src: "/On my way.aac" // Add your voice note file path here
   },
   {
-    title: "First Propose (❤️🩶)",
+    title: "First Propose ❤️🩶",
     description: "You proposed a boy studying in class 12th on 30th April 2026 @2:51",
-    type: "image",
-    src: "" // Add a screenshot or photo path here
+    type: "video",
+    src: "propose_vid.mp4" 
   },
   {
-    title: "First Voice Note (🫠)",
+    title: "First Voice Note 🫠",
     description: "Voice note of saying 3 magic words on 9th May 2026 @22:56",
     type: "audio",
     src: "" // Add your voice note file path here
   },
   {
-    title: "First Face Pic (😍)",
+    title: "First Face Pic 😍",
     description: "Show beautiful face 👀 on 25th April 2026 @10:28",
-    type: "image",
-    src: "" // Add your beautiful face pic path here
+    type: "video",
+    src: "face_reveal.mp4" 
   }
 ];
 
@@ -662,6 +662,123 @@ function MemoryVoicePlayer({ src, onPlay, onPause, onEnded }) {
           <span>{formatTime(duration)}</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const getSecureUrl = async () => {
+      if (!src) { setLoading(false); return; }
+      try {
+        let finalUrl;
+        // If the src is just a filename, fetch from the private Supabase bucket
+        if (!src.startsWith('http') && !src.startsWith('/')) {
+          // Use Signed URL for large files to allow streaming and avoid fetch errors
+          const { data, error } = await supabase.storage.from('private_vid').createSignedUrl(src, 3600);
+          if (error) throw error;
+          finalUrl = data.signedUrl;
+        } else {
+          finalUrl = src;
+        }
+
+        if (active) {
+          setVideoUrl(finalUrl);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Video loading failed", err);
+        // Fallback to direct src if blob fails, or show error
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+    getSecureUrl();
+    return () => {
+      active = false;
+    };
+  }, [src]);
+
+  useEffect(() => {
+    const closeMenu = () => setMenuOpen(false);
+    if (menuOpen) {
+      window.addEventListener('click', closeMenu);
+    }
+    return () => window.removeEventListener('click', closeMenu);
+  }, [menuOpen]);
+
+  const handleDownload = (e) => {
+    e.stopPropagation();
+    if (!videoUrl) return;
+    window.open(videoUrl, '_blank');
+    setMenuOpen(false);
+  };
+
+  const togglePlay = () => {
+    if (videoRef.current.paused) {
+      videoRef.current.play();
+    } else {
+      videoRef.current.pause();
+    }
+  };
+
+  return (
+    <div className="memory-video-custom">
+      {loading ? (
+        <div className="video-loader">Loading...</div>
+      ) : (
+        <>
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            playsInline
+            onPlay={() => { setIsPlaying(true); onPlay(); }}
+            onPause={() => { setIsPlaying(false); onPause(); }}
+            onEnded={() => { setIsPlaying(false); onEnded(); }}
+            className="memory-video-element"
+            onClick={togglePlay}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+          
+          <div className="video-custom-controls">
+            <button type="button" className="video-play-pause-btn" onClick={togglePlay}>
+              {isPlaying ? '⏸' : '▶'}
+            </button>
+            
+            <div className="video-controls-right">
+              <div 
+                className={`video-more-btn ${menuOpen ? 'is-active' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(!menuOpen);
+                }}
+              >
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              {menuOpen && (
+                <div className="video-dropdown-menu">
+                  <button type="button" onClick={handleDownload}>
+                    <span>⬇️</span> Download
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Overlay gradient to make controls pop */}
+          <div className="video-overlay-shimmer" />
+        </>
+      )}
     </div>
   );
 }
@@ -1392,9 +1509,8 @@ function BirthdayExperience({
                         />
                       )}
                       {idx === memoryIndex && memory.type === 'video' && (
-                        <video 
-                          controls 
-                          className="memory-card__video"
+                        <MemoryVideoPlayer 
+                          src={memory.src}
                           onPlay={() => {
                             setActiveMediaIndex(idx);
                             window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
@@ -1407,9 +1523,7 @@ function BirthdayExperience({
                             setActiveMediaIndex(null);
                             window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
                           }}
-                        >
-                          <source src={memory.src} type="video/mp4" />
-                        </video>
+                        />
                       )}
                       {memory.type === 'image' && (
                         <img src={memory.src} alt="" className="memory-card__img" onError={(e) => e.target.style.display = 'none'} />
