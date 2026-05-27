@@ -1084,7 +1084,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
                             className="thank-you-op-btn thank-you-op-btn--download" 
                             onClick={() => downloadAttachment(item)}
                           >
-                            Download
+                            <i className="fa-solid fa-download"></i> Download
                           </button>
                           <button 
                             className="thank-you-op-btn thank-you-op-btn--send" 
@@ -1148,7 +1148,7 @@ export default function ThankYouStudio({ open, onClose, userEmail }) {
                             className="thank-you-op-btn thank-you-op-btn--download" 
                             onClick={() => downloadAttachment(item)}
                           >
-                            Save
+                            <i className="fa-solid fa-download"></i> Save
                           </button>
                           <button 
                             type="button"

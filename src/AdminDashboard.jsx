@@ -285,7 +285,7 @@ function ImagePreviewAsset({ item, signedUrl, downloadName }) {
         title={downloading ? 'Downloading...' : `Download ${downloadName}`}
         disabled={downloading}
       >
-        ⭳
+        <i className="fa-solid fa-download"></i>
       </button>
     </div>
   );
@@ -315,7 +315,7 @@ function SubmissionAsset({ item, signedUrl }) {
       <div className="admin-asset admin-asset--media">
         <video className="admin-asset__media" src={signedUrl} controls playsInline />
         <a className="admin-asset__download" href={signedUrl} download={downloadName}>
-          Download
+          <i className="fa-solid fa-download"></i> Download
         </a>
       </div>
     );
@@ -326,7 +326,7 @@ function SubmissionAsset({ item, signedUrl }) {
       <div className="admin-asset admin-asset--media">
         <audio className="admin-asset__audio" src={signedUrl} controls />
         <a className="admin-asset__download" href={signedUrl} download={downloadName}>
-          Download
+          <i className="fa-solid fa-download"></i> Download
         </a>
       </div>
     );
@@ -334,9 +334,9 @@ function SubmissionAsset({ item, signedUrl }) {
 
   return (
     <a className="admin-asset admin-asset--file" href={signedUrl} download={downloadName}>
-      <span className="admin-asset__icon">Open</span>
+      <span className="admin-asset__icon"><i className="fa-solid fa-download"></i></span>
       <strong>{downloadName}</strong>
-      <small>Download</small>
+      <small><i className="fa-solid fa-download"></i> Download</small>
     </a>
   );
 }
@@ -491,7 +491,19 @@ export default function AdminDashboard({ onBackHome }) {
   const handleDeleteRequest = (row) => {
     setSubmissionToDelete(row);
     setDeleteConfirmOpen(true);
+    window.history.pushState({ popupOpen: true, type: 'delete-confirm' }, '');
   };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (deleteConfirmOpen) {
+        setDeleteConfirmOpen(false);
+        setSubmissionToDelete(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [deleteConfirmOpen]);
 
   const confirmDelete = async () => {
     if (!submissionToDelete || deleting) return;
@@ -530,6 +542,7 @@ export default function AdminDashboard({ onBackHome }) {
       }
 
       // 3. Update local state
+      if (window.history.state?.popupOpen) window.history.back();
       setSubmissions(prev => prev.filter(s => s.bundle_id !== row.bundle_id));
       setSignedUrls(prev => {
         const next = { ...prev };
@@ -756,7 +769,10 @@ export default function AdminDashboard({ onBackHome }) {
       <DeleteConfirmModal 
         open={deleteConfirmOpen}
         busy={deleting}
-        onCancel={() => setDeleteConfirmOpen(false)}
+        onCancel={() => {
+          setDeleteConfirmOpen(false);
+          if (window.history.state?.popupOpen) window.history.back();
+        }}
         onConfirm={confirmDelete}
       />
     </div>

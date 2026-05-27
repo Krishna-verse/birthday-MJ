@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿import { useEffect, useRef, useState } from 'react';
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import { useEffect, useRef, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { initBirthdaySite } from './site';
 import AdminDashboard from './AdminDashboard';
@@ -421,15 +421,23 @@ function ChatWidget() {
   const typingTimerRef = useRef(null);
 
   useEffect(() => {
+    const handlePopState = () => {
+      if (open) setOpen(false);
+    };
+    window.addEventListener('popstate', handlePopState);
+
     if (!open) {
       unlockBodyScroll();
-      return () => {};
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
     }
 
     lockBodyScroll();
     messagesEndRef.current?.scrollIntoView({ block: 'end' });
     return () => {
       unlockBodyScroll();
+      window.removeEventListener('popstate', handlePopState);
     };
   }, [open, messages, isTyping]);
 
@@ -458,6 +466,16 @@ function ChatWidget() {
     }, 650);
   };
 
+  const handleToggleChat = () => {
+    if (!open) {
+      window.history.pushState({ popupOpen: true, type: 'chat' }, '');
+      setOpen(true);
+    } else {
+      if (window.history.state?.popupOpen) window.history.back();
+      setOpen(false);
+    }
+  };
+
   const resetChat = () => {
     setMessages(initialChatMessages);
     setDraft('');
@@ -473,7 +491,7 @@ function ChatWidget() {
         aria-expanded={open}
         aria-controls="chatbot"
         aria-label={open ? 'Close chat' : 'Open chat'}
-        onClick={() => setOpen((value) => !value)}
+        onClick={handleToggleChat}
       >
         <span className="chat-toggle__icon" aria-hidden="true">
           {open ? <i className="fa-solid fa-xmark"></i> : '💬'}
@@ -717,6 +735,9 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
   const [isBuffering, setIsBuffering] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [videoRatio, setVideoRatio] = useState(9 / 16);
 
   useEffect(() => {
     let active = true;
@@ -779,10 +800,27 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
     }
   };
 
+  const formatVideoTime = (time) => {
+    const mins = Math.floor(time / 60) || 0;
+    const secs = Math.floor(time % 60) || 0;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleVideoSeek = (event) => {
+    if (!videoRef.current) return;
+    const nextTime = Number(event.target.value);
+    videoRef.current.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  };
+
   const showLoader = (loading || isBuffering) && !loadError;
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className={`memory-video-custom ${isPlaying ? 'is-playing' : ''}`}>
+    <div
+      className={`memory-video-custom ${isPlaying ? 'is-playing' : ''}`}
+      style={{ '--memory-video-ratio': String(videoRatio) }}
+    >
       {showLoader && (
         <div className="video-loader">
           <i className="fa-solid fa-circle-notch fa-spin"></i>
@@ -814,35 +852,63 @@ function MemoryVideoPlayer({ src, onPlay, onPause, onEnded }) {
             onPlay={() => { setIsPlaying(true); onPlay(); }}
             onPause={() => { setIsPlaying(false); onPause(); }}
             onEnded={() => { setIsPlaying(false); onEnded(); }}
+            onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
+            onLoadedMetadata={() => {
+              const video = videoRef.current;
+              setDuration(video?.duration || 0);
+              if (video?.videoWidth && video?.videoHeight) {
+                setVideoRatio(video.videoWidth / video.videoHeight);
+              }
+            }}
             className={`memory-video-element ${showLoader ? 'is-loading' : ''} is-visible`}
             onClick={togglePlay}
             onContextMenu={(e) => e.preventDefault()}
           />
           
           <div className={`video-custom-controls ${showLoader ? 'is-hidden' : ''}`}>
-            <button type="button" className="video-play-pause-btn" onClick={togglePlay}>
-              {isPlaying ? <i className="fa-solid fa-pause"></i> : <i className="fa-solid fa-play"></i>}
-            </button>
-            
-            <div className="video-controls-right">
-              <div 
-                className={`video-more-btn ${menuOpen ? 'is-active' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(!menuOpen);
-                }}
-              >
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-              {menuOpen && (
-                <div className="video-dropdown-menu">
-                  <button type="button" onClick={handleDownload}>
-                    <span>⬇️</span> Download
-                  </button>
+            <div className="video-time-ribbon">
+              <span>{formatVideoTime(currentTime)}</span>
+              <input
+                type="range"
+                className="video-memory-timeline"
+                min="0"
+                max={duration || 0}
+                step="0.01"
+                value={currentTime}
+                onChange={handleVideoSeek}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Memory video timeline"
+                style={{ '--video-progress': `${progress}%` }}
+              />
+              <span>{formatVideoTime(duration)}</span>
+            </div>
+
+            <div className="video-control-row">
+              <button type="button" className="video-play-pause-btn" onClick={togglePlay}>
+                {isPlaying ? <i className="fa-solid fa-pause"></i> : <i className="fa-solid fa-play"></i>}
+              </button>
+              
+              <div className="video-controls-right">
+                <div 
+                  className={`video-more-btn ${menuOpen ? 'is-active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(!menuOpen);
+                  }}
+                >
+                  <span></span>
+                  <span></span>
+                  <span></span>
                 </div>
-              )}
+                {menuOpen && (
+                  <div className="video-dropdown-menu">
+                    <button type="button" onClick={handleDownload}>
+                      <i className="fa-solid fa-download"></i> Download
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -934,9 +1000,28 @@ function BirthdayExperience({
 
   const openThankYouStudio = () => {
     setThankYouOpen(true);
+    window.history.pushState({ popupOpen: true, type: 'thank-you' }, '');
+  };
+
+  const closeFullscreenVideo = (event) => {
+    event?.stopPropagation();
+    window.dispatchEvent(new CustomEvent('birthday:recording-audio-resume'));
+
+    if (window.history.state?.type === 'fullscreen-video') {
+      window.history.back();
+      return;
+    }
+
+    setFullscreenVid(null);
   };
 
   useEffect(() => {
+    const handlePopState = () => {
+      if (thankYouOpen) setThankYouOpen(false);
+      if (fullscreenVid) setFullscreenVid(null);
+    };
+    window.addEventListener('popstate', handlePopState);
+
     if (thankYouOpen || !!fullscreenVid) {
       lockBodyScroll();
     } else {
@@ -945,6 +1030,7 @@ function BirthdayExperience({
 
     return () => {
       unlockBodyScroll();
+      window.removeEventListener('popstate', handlePopState);
     };
   }, [thankYouOpen, fullscreenVid]);
 
@@ -1618,6 +1704,7 @@ function BirthdayExperience({
                             className="special-see-btn" 
                             onClick={() => {
                               setFullscreenVid(memory);
+                              window.history.pushState({ popupOpen: true, type: 'fullscreen-video' }, '');
                               window.dispatchEvent(new CustomEvent('birthday:recording-audio-pause'));
                             }}
                           >
@@ -1723,14 +1810,22 @@ function BirthdayExperience({
         </div>
       ) : null}
 
-      <ThankYouStudio open={thankYouOpen} onClose={() => setThankYouOpen(false)} userEmail={userEmail} />
+      <ThankYouStudio 
+        open={thankYouOpen} 
+        onClose={() => {
+          setThankYouOpen(false);
+          if (window.history.state?.popupOpen) window.history.back();
+        }} 
+        userEmail={userEmail} 
+      />
 
       {fullscreenVid && (
-        <div className="fullscreen-video-modal" onClick={() => setFullscreenVid(null)}>
+        <div className="fullscreen-video-modal" onClick={closeFullscreenVideo}>
           <div className="fullscreen-video-panel" onClick={e => e.stopPropagation()}>
             <button 
               className="fullscreen-video-close" 
-              onClick={() => setFullscreenVid(null)}
+              type="button"
+              onClick={closeFullscreenVideo}
             ><i className="fa-solid fa-xmark"></i>
             </button>
             <div className="fullscreen-video-body">
@@ -1834,6 +1929,20 @@ export default function App() {
   const [sessionMessage, setSessionMessage] = useState('');
   const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    const handleGlobalPopState = (event) => {
+      const state = event.state;
+      if (activeView === 'admin' && state?.type !== 'admin') {
+        setActiveView('home');
+      }
+      if (signOutConfirmOpen && !state?.popupOpen) {
+        setSignOutConfirmOpen(false);
+      }
+    };
+    window.addEventListener('popstate', handleGlobalPopState);
+    return () => window.removeEventListener('popstate', handleGlobalPopState);
+  }, [activeView, signOutConfirmOpen]);
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -2065,6 +2174,7 @@ export default function App() {
 
   const handleSignOutRequest = () => {
     setSignOutConfirmOpen(true);
+    window.history.pushState({ popupOpen: true, type: 'sign-out-confirm' }, '');
   };
 
   const handleSignOutCancel = () => {
@@ -2073,6 +2183,7 @@ export default function App() {
     }
 
     setSignOutConfirmOpen(false);
+    if (window.history.state?.popupOpen) window.history.back();
   };
 
   const handleSignOut = async () => {
@@ -2102,6 +2213,7 @@ export default function App() {
 
   const handleOpenAdminPage = () => {
     setActiveView('admin');
+    window.history.pushState({ type: 'admin' }, '');
   };
 
   if (authLoading) {
@@ -2159,7 +2271,10 @@ export default function App() {
     return (
       <>
       <AdminDashboard
-          onBackHome={() => setActiveView('home')}
+          onBackHome={() => {
+            setActiveView('home');
+            if (window.history.state?.type === 'admin') window.history.back();
+          }}
           userEmail={session.user?.email}
         />
         <SignOutConfirmModal

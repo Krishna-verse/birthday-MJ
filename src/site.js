@@ -1,4 +1,4 @@
-﻿﻿﻿﻿export function initBirthdaySite() {
+﻿﻿﻿﻿﻿﻿export function initBirthdaySite() {
 /* =========================
    DOM ELEMENTS
 ========================= */
@@ -409,12 +409,16 @@ function openPopup(popup) {
     document.body.classList.add("is-scroll-locked");
     document.body.style.overflow = "hidden";
   }
+  window.history.pushState({ popupOpen: true }, "");
   fireCardOpenConfetti();
 }
 
-function closePopup(popup) {
+function closePopup(popup, isPopState = false) {
   popup.classList.remove("show-popup");
   overlay.classList.remove("show");
+  if (!isPopState && window.history.state?.popupOpen) {
+    window.history.back();
+  }
   setTimeout(() => {
     popup.style.display = "none";
     const anyOpen = [wishPopup, partyPopup, sharePopup, gamePopup, rizzPopup, musicPopup, aboutPopup, memoriesPopup, picsPopup]
@@ -425,9 +429,13 @@ function closePopup(popup) {
     }
   }, 300);
 }
-const overlayClickHandler = () => {
+const overlayClickHandler = (event) => {
+  const isPopState = event === "popstate";
+  let anyWasOpen = false;
+
   [wishPopup, partyPopup, sharePopup, gamePopup, rizzPopup, musicPopup, aboutPopup, memoriesPopup, picsPopup].forEach(p => {
     if (p && p.style.display === "block") {
+      anyWasOpen = true;
       p.classList.remove("blur-active");
       p.classList.remove("show-popup");
       p.style.display = "none";
@@ -436,6 +444,10 @@ const overlayClickHandler = () => {
       }
     }
   });
+
+  if (anyWasOpen && !isPopState && window.history.state?.popupOpen) {
+    window.history.back();
+  }
 
   overlay.classList.remove("show");
   if (typeof document !== "undefined" && document.body) {
@@ -1814,8 +1826,17 @@ Object.assign(window, {
   closePics
 });
 
+const handlePopState = () => {
+  if (document.querySelector(".fullscreen-video-modal")) {
+    return;
+  }
+  overlayClickHandler("popstate");
+};
+window.addEventListener("popstate", handlePopState);
+
 return () => {
   overlay.removeEventListener("click", overlayClickHandler);
+  window.removeEventListener("popstate", handlePopState);
   window.removeEventListener("birthday:home-visible", handleHomeVisible);
   window.removeEventListener("birthday:recording-audio-pause", pauseAudioForRecording);
   window.removeEventListener("birthday:recording-audio-resume", resumeAudioAfterRecording);
